@@ -1,0 +1,21 @@
+[versions]
+loom = "1.10.1"
+kotlin = "2.2.0"
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization-json = "1.8.1"
+ksp = "2.2.0-2.0.2"
+kotlinpoet = "2.2.0"
+shadow = "9.0.0-rc1"
+
+[libraries]
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
+ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
+kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
+kotlinpoet-kotlin-metadata = { module = "com.squareup:kotlinpoet-kotlin-metadata", version.ref = "kotlinpoet" }
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+loom = { id = "fabric-loom", version.ref = "loom" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

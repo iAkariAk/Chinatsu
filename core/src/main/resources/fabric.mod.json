@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "chinatsu",
+  "version": "${version}",
+  "name": "Chinatsu",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "Apache-2.0",
+  "icon": "assets/chinatsu/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.iakakariak.chinatsu.Chinatsu_ChinatsuApp"
+    ]
+  },
+  "mixins": [
+    "chinatsu.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
