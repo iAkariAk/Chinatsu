@@ -24,12 +24,6 @@ java {
     withSourcesJar()
 }
 
-kotlin {
-    compilerOptions {
-        freeCompilerArgs = listOf("-Xcontext-parameters")
-    }
-}
-
 tasks.shadowJar {
     isZip64 = true
 }

@@ -9,10 +9,22 @@ import com.squareup.kotlinpoet.ksp.addOriginatingKSFile
 @DslMarker
 annotation class ProcessesDsl
 
-@ProcessesDsl
-interface FileScope {
+interface NotifyScope {
     fun notifyChange(file: KSFile)
     fun TypeSpec.Builder.attachNotifies(): TypeSpec.Builder
+}
+
+fun NotifyScope(): NotifyScope = NotifyScopeImpl()
+
+private class NotifyScopeImpl : NotifyScope{
+    val files = mutableListOf<KSFile>()
+    override fun notifyChange(file: KSFile) {
+        files.add(file)
+    }
+
+    override fun TypeSpec.Builder.attachNotifies() = apply {
+        files.forEach(::addOriginatingKSFile)
+    }
 }
 
 
@@ -20,8 +32,11 @@ class ProcessEnv(
     val environment: SymbolProcessorEnvironment,
     val resolver: Resolver
 ) {
-    fun createFile(block: FileScope.() -> Unit) {
-        val scope = object : FileScope {
+    val codeGenerator get() = environment.codeGenerator
+    val logger get() = environment.logger
+
+    fun createFile(block: NotifyScope.() -> Unit) {
+        val scope = object : NotifyScope {
             val files = mutableListOf<KSFile>()
             override fun notifyChange(file: KSFile) {
                 files.add(file)

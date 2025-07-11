@@ -20,7 +20,11 @@ subprojects {
         configure<KotlinJvmProjectExtension> {
             compilerOptions {
                 // Refer to https://kotlinlang.org/docs/whatsnew22.html
-                freeCompilerArgs = listOf("-Xcontext-parameters", "-Xcontext-sensitive-resolution")
+                freeCompilerArgs = listOf(
+                    "-Xcontext-parameters",
+                    "-Xcontext-sensitive-resolution",
+                    "-Xnested-type-aliases"
+                )
             }
         }
     }

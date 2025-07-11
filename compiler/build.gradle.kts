@@ -8,3 +8,12 @@ dependencies {
     implementation(libs.ksp.api)
     implementation(libs.kotlinpoet.ksp)
 }
+
+
+kotlin {
+    compilerOptions {
+        optIn = listOf(
+            "com.google.devtools.ksp.KspExperimental"
+        )
+    }
+}

@@ -5,8 +5,8 @@ package io.github.iakakariak.chinatsu.annotation
     AnnotationTarget.FILE, AnnotationTarget.PROPERTY,
     AnnotationTarget.CLASS, AnnotationTarget.FUNCTION
 )
-annotation class Init(val side: SideType = SideType.Both)
+annotation class Init(val side: SideType = SideType.Common)
 
 enum class SideType {
-    Server, Client, Both
+    Server, Client, Common
 }
