@@ -12,12 +12,12 @@ import io.github.iakakariak.chinatsu.compiler.module.registerInit
 
 
 context(env: ProcessEnv)
-private fun ChinatsuAppRegisterScope.registerSetup() {
+private fun ChinatsuAppSetupRegisterScope.registerSetup() {
     registerConfig()
     registerInit()
 }
 
-interface ChinatsuAppRegisterScope : NotifyScope {
+interface ChinatsuAppSetupRegisterScope : NotifyScope {
     fun addClient(name: String, block: CodeBlock)
     fun addServer(name: String, block: CodeBlock)
     fun addCommon(name: String, block: CodeBlock)
@@ -29,7 +29,7 @@ interface ChinatsuAppRegisterScope : NotifyScope {
     }
 }
 
-private class ChinatsuAppRegisterScopeImpl : ChinatsuAppRegisterScope, NotifyScope by NotifyScope() {
+private class ChinatsuAppSetupRegisterScopeImpl : ChinatsuAppSetupRegisterScope, NotifyScope by NotifyScope() {
     private typealias RegisterEnter = Pair<String, CodeBlock>
 
     private val clientBlocks = mutableListOf<RegisterEnter>()
@@ -62,7 +62,7 @@ private class ChinatsuAppRegisterScopeImpl : ChinatsuAppRegisterScope, NotifySco
 
 context(env: ProcessEnv)
 fun TypeMirrors.generateChinatsuApp() = env.createFile {
-    val register = ChinatsuAppRegisterScopeImpl()
+    val register = ChinatsuAppSetupRegisterScopeImpl()
     register.apply { registerSetup() }
     fun setupFunc(sideType: SideType) = FunSpec.builder("c_setup$sideType")
         .addModifiers(KModifier.PRIVATE)

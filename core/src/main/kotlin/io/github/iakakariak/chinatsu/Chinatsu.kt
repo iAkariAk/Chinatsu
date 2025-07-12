@@ -1,9 +1,7 @@
 package io.github.iakakariak.chinatsu
 
 import io.github.iakakariak.chinatsu.Chinatsu.Companion.logger
-import io.github.iakakariak.chinatsu.annotation.CConfigs
-import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
-import io.github.iakakariak.chinatsu.annotation.Init
+import io.github.iakakariak.chinatsu.annotation.*
 import io.github.iakakariak.chinatsu.config.Comment
 import io.github.iakakariak.chinatsu.config.Config
 import io.github.iakakariak.chinatsu.config.Configs
@@ -27,11 +25,15 @@ fun commonSetup() {
     logger.info("Chinatsu is launching with ${config.name}")
 }
 
+@AutoCodec
+@AutoStreamCodec
 @Serializable
 data class ChinatsuConfig(
     @Comment("How to name you desu.")
     val name: String = "Akari"
-) : Config
+) : Config {
+    companion object
+}
 
 @CConfigs
 object ChinatsuConfigs : Configs<ChinatsuConfig>("chinatsu", ChinatsuConfig.serializer()) {

@@ -12,11 +12,14 @@ internal inline fun <reified T : Annotation> annotation() =
 
 inline fun Boolean.onTrue(block: () -> Unit): Boolean = also { if (it) block() }
 inline fun Boolean.onFalse(block: () -> Unit): Boolean = also { if (!it) block() }
+inline fun <R> R.onNull(block: () -> Unit): R = also { it ?: block() }
 
 
-val KSFile.jvmName: String get() =
-    this.getAnnotationsByType(JvmName::class).firstOrNull()?.name ?: "${fileName.removeSuffix(".kt")}Kt"
+val KSFile.fileNameWithoutExtension: String
+    get() = fileName.removeSuffix(".kt")
 
+val KSFile.jvmName: String
+    get() = this.getAnnotationsByType(JvmName::class).firstOrNull()?.name ?: "${fileNameWithoutExtension}Kt"
 
-val KSDeclaration.absolutePath: String get() =
-    packageName.asString() + "." + simpleName.asString()
+val KSDeclaration.absolutePath: String
+    get() = packageName.asString() + "." + simpleName.asString()

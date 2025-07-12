@@ -8,6 +8,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
+import io.github.iakakariak.chinatsu.compiler.module.generateCodecs
 
 class ChinatsuProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment) = ChinatsuProcessor(environment)
@@ -21,6 +22,7 @@ class ChinatsuProcessor(private val environment: SymbolProcessorEnvironment) : S
         with(mirrors) {
             context(env) {
                 generateChinatsuApp()
+                generateCodecs()
             }
         }
 

@@ -17,7 +17,7 @@ import io.github.iakakariak.chinatsu.compiler.*
 private const val MODULE_NAME = "init"
 
 context(env: ProcessEnv)
-fun ChinatsuAppRegisterScope.registerInit() {
+fun ChinatsuAppSetupRegisterScope.registerInit() {
     val inits = generateSideInits()
     fun specifyInits(sideType: SideType) = inits
         .filter { (side, _) -> side == sideType }
