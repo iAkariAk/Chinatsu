@@ -7,13 +7,14 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.writeTo
 import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
 import io.github.iakakariak.chinatsu.annotation.SideType
+import io.github.iakakariak.chinatsu.compiler.module.registerConfig
 import io.github.iakakariak.chinatsu.compiler.module.registerInit
 
 
 context(env: ProcessEnv)
 private fun ChinatsuAppRegisterScope.registerSetup() {
+    registerConfig()
     registerInit()
-
 }
 
 interface ChinatsuAppRegisterScope : NotifyScope {
@@ -21,10 +22,10 @@ interface ChinatsuAppRegisterScope : NotifyScope {
     fun addServer(name: String, block: CodeBlock)
     fun addCommon(name: String, block: CodeBlock)
 
-    fun add(sideType: SideType, name: String, block: CodeBlock) = when(sideType) {
-        SideType.Server -> addServer(name,block)
-        SideType.Client -> addClient(name,block)
-        SideType.Common -> addCommon(name,block)
+    fun add(sideType: SideType, name: String, block: CodeBlock) = when (sideType) {
+        SideType.Server -> addServer(name, block)
+        SideType.Client -> addClient(name, block)
+        SideType.Common -> addCommon(name, block)
     }
 }
 
@@ -73,7 +74,7 @@ fun TypeMirrors.generateChinatsuApp() = env.createFile {
     val commonSetup = setupFunc(SideType.Common)
 
     env.resolver.getSymbolsWithAnnotation(annotation<ChinatsuApp>())
-        .mapNotNull { it as? KSClassDeclaration }
+        .filterIsInstance<KSClassDeclaration>()
         .filter {
             (Modifier.OPEN in it.modifiers)
                 .onFalse { env.logger.error("The entry class must be `open`", it) }
@@ -124,6 +125,7 @@ fun TypeMirrors.generateChinatsuApp() = env.createFile {
                 .addAnnotation(
                     AnnotationSpec.builder(Suppress::class)
                         .addMember("%S", "ClassName")
+                        .addMember("%S", "FunctionName")
                         .addMember("%S", "RemoveRedundantQualifierName")
                         .addMember("%S", "RedundantVisibilityModifier")
                         .addMember("%S", "SpellCheckingInspection")

@@ -1,6 +1,6 @@
 package io.github.iakakariak.chinatsu.annotation
 
-@Retention(AnnotationRetention.BINARY)
+@Retention(AnnotationRetention.SOURCE)
 @Target(
     AnnotationTarget.FILE, AnnotationTarget.PROPERTY,
     AnnotationTarget.CLASS, AnnotationTarget.FUNCTION

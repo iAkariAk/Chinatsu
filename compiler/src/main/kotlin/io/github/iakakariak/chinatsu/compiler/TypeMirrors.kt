@@ -8,4 +8,5 @@ class TypeMirrors(resolver: Resolver) {
     val FabricLoader = resolver.getClassDeclarationByName("net.fabricmc.loader.api.FabricLoader")!!
     val ModInitializer = resolver.getClassDeclarationByName("net.fabricmc.api.ModInitializer")!!
     val EnvType = resolver.getClassDeclarationByName("net.fabricmc.api.EnvType")!!
+    val Configs = resolver.getClassDeclarationByName("io.github.iakakariak.chinatsu.config.Configs")!!
 }

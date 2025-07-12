@@ -1,6 +1,7 @@
 package io.github.iakakariak.chinatsu
 
 import io.github.iakakariak.chinatsu.Chinatsu.Companion.logger
+import io.github.iakakariak.chinatsu.annotation.CConfigs
 import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
 import io.github.iakakariak.chinatsu.annotation.Init
 import io.github.iakakariak.chinatsu.config.Comment
@@ -9,6 +10,7 @@ import io.github.iakakariak.chinatsu.config.Configs
 import kotlinx.serialization.Serializable
 import net.fabricmc.api.ModInitializer
 import org.slf4j.LoggerFactory
+
 
 @ChinatsuApp
 open class Chinatsu : ModInitializer {
@@ -31,6 +33,7 @@ data class ChinatsuConfig(
     val name: String = "Akari"
 ) : Config
 
+@CConfigs
 object ChinatsuConfigs : Configs<ChinatsuConfig>("chinatsu", ChinatsuConfig.serializer()) {
     override val default = ChinatsuConfig()
 }
