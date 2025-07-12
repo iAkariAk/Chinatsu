@@ -9,12 +9,14 @@ import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
 import io.github.iakakariak.chinatsu.annotation.SideType
 import io.github.iakakariak.chinatsu.compiler.module.registerConfig
 import io.github.iakakariak.chinatsu.compiler.module.registerInit
+import io.github.iakakariak.chinatsu.compiler.module.registerSubscribeEvent
 
 
 context(env: ProcessEnv)
 private fun ChinatsuAppSetupRegisterScope.registerSetup() {
     registerConfig()
     registerInit()
+    registerSubscribeEvent()
 }
 
 interface ChinatsuAppSetupRegisterScope : NotifyScope {

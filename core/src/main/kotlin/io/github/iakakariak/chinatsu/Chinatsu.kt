@@ -1,15 +1,16 @@
 package io.github.iakakariak.chinatsu
 
 import io.github.iakakariak.chinatsu.Chinatsu.Companion.logger
-import io.github.iakakariak.chinatsu.annotation.AutoStreamCodec
-import io.github.iakakariak.chinatsu.annotation.CConfigs
-import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
-import io.github.iakakariak.chinatsu.annotation.Init
+import io.github.iakakariak.chinatsu.annotation.*
 import io.github.iakakariak.chinatsu.config.Comment
 import io.github.iakakariak.chinatsu.config.Config
 import io.github.iakakariak.chinatsu.config.Configs
 import kotlinx.serialization.Serializable
 import net.fabricmc.api.ModInitializer
+import net.minecraft.core.BlockPos
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.state.BlockState
 import org.slf4j.LoggerFactory
 
 
@@ -26,6 +27,12 @@ open class Chinatsu : ModInitializer {
 fun commonSetup() {
     val config by ChinatsuConfigs
     logger.info("Chinatsu is launching with ${config.name}")
+}
+
+@SubscribeEvent("PlayerPickItemEvents.BLOCK")
+fun onPick(player: ServerPlayer, pos: BlockPos, state: BlockState, requestIncludeData: Boolean): ItemStack {
+    println(player.name)
+    return player.mainHandItem
 }
 
 //@AutoCodec

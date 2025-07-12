@@ -16,4 +16,5 @@ class TypeMirrors(private val resolver: Resolver) {
     val StreamCodec = get("net.minecraft.network.codec.StreamCodec")
     val FriendlyByteBuf = get("net.minecraft.network.FriendlyByteBuf")
     val ByteBufCodecs = get("net.minecraft.network.codec.ByteBufCodecs")
+    val Event = get("net.fabricmc.fabric.api.event.Event")
 }

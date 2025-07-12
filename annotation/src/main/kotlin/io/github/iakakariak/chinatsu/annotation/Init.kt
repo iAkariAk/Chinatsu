@@ -7,6 +7,3 @@ package io.github.iakakariak.chinatsu.annotation
 )
 annotation class Init(val side: SideType = SideType.Common)
 
-enum class SideType {
-    Server, Client, Common
-}
