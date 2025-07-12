@@ -15,6 +15,9 @@ inline fun Boolean.onFalse(block: () -> Unit): Boolean = also { if (!it) block()
 inline fun <R> R.onNull(block: () -> Unit): R = also { it ?: block() }
 
 
+inline fun <reified T> qualificationOf() = T::class.qualifiedName!!
+
+
 val KSFile.fileNameWithoutExtension: String
     get() = fileName.removeSuffix(".kt")
 

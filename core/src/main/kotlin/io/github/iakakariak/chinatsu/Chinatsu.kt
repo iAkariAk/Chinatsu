@@ -1,7 +1,10 @@
 package io.github.iakakariak.chinatsu
 
 import io.github.iakakariak.chinatsu.Chinatsu.Companion.logger
-import io.github.iakakariak.chinatsu.annotation.*
+import io.github.iakakariak.chinatsu.annotation.AutoStreamCodec
+import io.github.iakakariak.chinatsu.annotation.CConfigs
+import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
+import io.github.iakakariak.chinatsu.annotation.Init
 import io.github.iakakariak.chinatsu.config.Comment
 import io.github.iakakariak.chinatsu.config.Config
 import io.github.iakakariak.chinatsu.config.Configs
@@ -25,12 +28,14 @@ fun commonSetup() {
     logger.info("Chinatsu is launching with ${config.name}")
 }
 
-@AutoCodec
+//@AutoCodec
 @AutoStreamCodec
 @Serializable
 data class ChinatsuConfig(
     @Comment("How to name you desu.")
-    val name: String = "Akari"
+    val name: String = "Akari",
+    @Comment("Less than 18 will be banned desuno.")
+    val age: Int = 17
 ) : Config {
     companion object
 }

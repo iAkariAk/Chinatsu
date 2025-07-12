@@ -15,4 +15,5 @@ class TypeMirrors(private val resolver: Resolver) {
     val Codec = get("com.mojang.serialization.Codec")
     val StreamCodec = get("net.minecraft.network.codec.StreamCodec")
     val FriendlyByteBuf = get("net.minecraft.network.FriendlyByteBuf")
+    val ByteBufCodecs = get("net.minecraft.network.codec.ByteBufCodecs")
 }
