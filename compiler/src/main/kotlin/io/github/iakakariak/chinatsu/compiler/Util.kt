@@ -16,6 +16,7 @@ inline fun <R> R.onNull(block: () -> Unit): R = also { it ?: block() }
 
 
 inline fun <reified T> qualificationOf() = T::class.qualifiedName!!
+inline fun <reified T> typeNameStringOf() = T::class.qualifiedName!!
 
 
 val KSFile.fileNameWithoutExtension: String
