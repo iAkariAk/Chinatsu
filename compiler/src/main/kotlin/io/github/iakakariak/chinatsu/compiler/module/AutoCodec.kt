@@ -91,15 +91,14 @@ private sealed interface AnnotatedByCodec {
     fun generateCodeBlock(): Pair<ParameterizedTypeName, TypeSpec>
 }
 
-data class ByCodec(override val declaration: KSClassDeclaration, override val name: String) : AnnotatedByCodec {
+private data class ByCodec(override val declaration: KSClassDeclaration, override val name: String) : AnnotatedByCodec {
     context(env: ProcessEnv, types: TypeMirrors)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, TypeSpec> {
         TODO()
     }
 
 }
-
-data class ByStreamCodec(override val declaration: KSClassDeclaration, override val name: String) :
+private data class ByStreamCodec(override val declaration: KSClassDeclaration, override val name: String) :
     AnnotatedByCodec {
     context(env: ProcessEnv, types: TypeMirrors)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, TypeSpec> {

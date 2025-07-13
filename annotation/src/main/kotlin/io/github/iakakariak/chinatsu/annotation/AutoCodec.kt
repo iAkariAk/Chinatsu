@@ -27,4 +27,7 @@ annotation class AutoStreamCodec(val name: String = DEFAULT_NAME) {
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.PROPERTY)
-annotation class CodecInfo(val name: String = "~", val codecCalling: String = "~.^")
+annotation class CodecInfo(
+    val name: String = "~",
+    val codecCalling: String = "~.^"
+)

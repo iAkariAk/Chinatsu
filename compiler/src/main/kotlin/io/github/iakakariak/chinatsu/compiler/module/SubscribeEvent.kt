@@ -16,17 +16,12 @@ import io.github.iakakariak.chinatsu.compiler.onFalse
 context(env: ProcessEnv)
 fun ChinatsuAppSetupRegisterScope.registerSubscribeEvent() {
     println(env.resolver.getSymbolsWithAnnotation(annotation<SubscribeEvent>()))
-
     env.resolver.getSymbolsWithAnnotation(annotation<SubscribeEvent>())
         .filterIsInstance<KSFunctionDeclaration>()
         .map { it.getAnnotationsByType(SubscribeEvent::class).first() to it }
         .filter { (_, d) ->
             ((d.parent as? KSClassDeclaration)?.classKind?.let { it == ClassKind.OBJECT } ?: true)
                 .onFalse { env.logger.error("You must ensure what you annotation can be invoked statically.") }
-        }
-        .filter { (_, d) ->
-            (d.parameters.size == 1)
-                .onFalse { env.logger.error("That parameters solely can be 1 ") }
         }
         .forEach { (annotation, declaration) ->
             declaration.containingFile?.let { file -> notifyChange(file) }
