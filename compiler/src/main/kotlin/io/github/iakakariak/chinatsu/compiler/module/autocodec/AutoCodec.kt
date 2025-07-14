@@ -11,6 +11,8 @@ import io.github.iakakariak.chinatsu.annotation.AutoCodec
 import io.github.iakakariak.chinatsu.annotation.AutoStreamCodec
 import io.github.iakakariak.chinatsu.compiler.*
 
+private val JFunctionName = java.util.function.Function::class.asClassName()
+
 context(env: ProcessEnv)
 fun TypeMirrors.generateCodecs() = env.createFile {
     val codecClass = env.resolver.getSymbolsWithAnnotation(annotation<AutoCodec>())
@@ -63,6 +65,7 @@ private fun NotifyScope.generateForAnnotatedByCodec(source: KSFile, byCodecs: Li
     }
     FileSpec.builder(source.packageName.asString(), source.fileNameWithoutExtension + "_Codecs")
         .apply { properties.forEach(::addProperty) }
+        .addAliasedImport(JFunctionName, "JFunction")
         .build()
         .writeTo(env.codeGenerator, false)
 }
@@ -101,36 +104,54 @@ internal data class ByCodec(
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, Any> {
         val tType = declaration.toClassName()
         val type = type(tType)
+        val infos = CodecPropertyInfo.fromClass(declaration, this@ByCodec).toList()
+        val infosReversed = infos.reversed()
 
-        fun apN(infos: List<CodecPropertyInfo>, constructorRef: CodeBlock) = buildCodeBlock {
-            val n = infos.size
-            if (n <= 16) {
-                add("instance.ap")
-                if (n != 1) {
-                    add("$n")
-                }
-                add("(")
-                indent()
-                add("instance.point(%L),\n", constructorRef)
-                add(infos.joinToCode(",\n", suffix = "\n") {
-                    it.descriptorBlock()
-                })
-                unindent()
-                add(")")
+        fun CodeBlock.Builder.addCurryConstructor(index: Int = 0) {
+            if (index >= infos.size) {
+                val args = infos
+                    .mapIndexed { i, _ -> "a$i" }
+                    .joinToCode(transform = CodeBlock::of)
+                add("%T(%L)\n", declaration.toClassName(), args)
+                return
+            }
+
+            val info = infos[index]
+            add("%T { a$index: %T ->\n", JFunctionName, info.type.toClassName())
+            indent()
+            addCurryConstructor(index + 1)
+            unindent()
+            add("}")
+            if (index >= 1) {
+                add("\n")
+            }
+        }
+
+        fun CodeBlock.Builder.addCurryApRecursively(index: Int = 0) {
+            if (index >= infosReversed.size) return
+
+            val info = infosReversed[index]
+            add("instance.ap(\n")
+            indent()
+            if (index == infosReversed.lastIndex) {
+                addCurryConstructor()
+            }
+            addCurryApRecursively(index + 1)
+            add(",\n")
+            add(info.descriptorBlock())
+            add("\n")
+            unindent()
+            add(")")
+            if (index == 0) {
+                add("\n")
             }
         }
 
 
         val initializer = buildCodeBlock {
-            add(
-                "%T.create { instance ->\n", env.typeMirrors.RecordCodecBuilder.toClassName()
-            )
-            indent()
-            val infos = CodecPropertyInfo.fromClass(declaration, this@ByCodec).toList()
-            val constructorRef = declaration.toClassName().constructorReference()
-            add(apN(infos,constructorRef))
+            add("%T.create { instance ->\n", env.typeMirrors.RecordCodecBuilder.toClassName())
+            addCurryApRecursively()
             add("}")
-            unindent()
         }
         return type to initializer
     }
@@ -152,9 +173,8 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
                 StreamCodecPropertyInfo.fromClass(declaration, this)
                     .map { it ->
                         buildCodeBlock {
-                            val pType = it.declaration.type.resolve()
                             add("%L = ", it.name)
-                            add(it.decodeBlock(pType, "buf"))
+                            add(it.decodeBlock("buf"))
                         }
                     }
                     .toList()
@@ -168,8 +188,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
             .addCode(
                 StreamCodecPropertyInfo.fromClass(declaration, this)
                     .map {
-                        val pType = it.declaration.type.resolve()
-                        it.encodeBlock(pType, "buf", "value")
+                        it.encodeBlock("buf", "value")
                     }
                     .toList()
                     .joinToCode("\n")

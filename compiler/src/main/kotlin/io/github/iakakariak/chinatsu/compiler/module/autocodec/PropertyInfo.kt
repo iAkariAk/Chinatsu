@@ -16,6 +16,7 @@ import io.github.iakakariak.chinatsu.compiler.module.autocodec.PropertyInfo.Comp
 import io.github.iakakariak.chinatsu.compiler.module.autocodec.PropertyInfo.Companion.getName
 import io.github.iakakariak.chinatsu.compiler.qualificationOf
 import io.github.iakakariak.chinatsu.compiler.toMemberName
+import io.github.iakakariak.chinatsu.compiler.typeNameStringOf
 import java.util.*
 
 context(types: TypeMirrors)
@@ -37,21 +38,24 @@ internal interface StreamCodecPropertyInfo : PropertyInfo<ByStreamCodec> {
 
     }
 
-    fun encodeBlock(type: KSType, bufName: String, valueName: String): CodeBlock = if (type.isMarkedNullable) {
-        CodeBlock.of(
-            "%L.encode(%L, %T.ofNullable(%L.%L))",
-            codecCalling,
-            bufName,
-            Optional::class.asClassName().parameterizedBy(type.makeNotNullable().toClassName()),
-            valueName,
-            name
-        )
-    } else {
-        CodeBlock.of("%L.encode(%L, %L.%L)", codecCalling, bufName, valueName, name)
+    fun encodeBlock(bufName: String, valueName: String): CodeBlock {
+        val type = declaration.type.resolve()
+        return if (type.isMarkedNullable) {
+            CodeBlock.of(
+                "%L.encode(%L, %T.ofNullable(%L.%L))",
+                codecCalling,
+                bufName,
+                Optional::class.asClassName().parameterizedBy(type.makeNotNullable().toClassName()),
+                valueName,
+                name
+            )
+        } else {
+            CodeBlock.of("%L.encode(%L, %L.%L)", codecCalling, bufName, valueName, name)
+        }
     }
 
 
-    fun decodeBlock(type: KSType, bufName: String) = if (type.isMarkedNullable) {
+    fun decodeBlock(bufName: String) = if (type.isMarkedNullable) {
         CodeBlock.of("%L.decode(%L).orElse(null)", codecCalling, bufName)
     } else {
         CodeBlock.of("%L.decode(%L)", codecCalling, bufName)
@@ -79,14 +83,15 @@ internal interface CodecPropertyInfo : PropertyInfo<ByCodec> {
 
     }
 
-    fun descriptorBlock() =
-        CodeBlock.of(
-            "%L.fieldOf(%S).forGetter(%L)",
-            codecCalling,
-            name,
-            declaration.toMemberName().reference()
-        ).also { println(it) }
+    fun descriptorBlock() = CodeBlock.of(
+        "%L.%L(%S).forGetter(%L)",
+        codecCalling,
+        if (type.isMarkedNullable) "optionalFieldOf" else "fieldOf",
+        name,
+        declaration.toMemberName().reference()
+    )
 }
+
 
 context(types: TypeMirrors)
 private fun <T : AnnotatedByCodec> BasicPropertyInfo(
@@ -111,6 +116,8 @@ internal interface PropertyInfo<T : AnnotatedByCodec> {
     val name: String
     val codecCalling: CodeBlock
     val source: T
+
+    val type get() = declaration.type.resolve()
 
     companion object {
         context(types: TypeMirrors)
@@ -160,16 +167,16 @@ private fun KSType.correspondStreamCodecCalling(): CodeBlock {
         }
     }
     val field = when (cname) {
-        qualificationOf<Boolean>() -> "BOOL"
-        qualificationOf<Byte>() -> "BYTE"
-        qualificationOf<Short>() -> "SHORT"
-        qualificationOf<Int>() -> "INT"
-        qualificationOf<Long>() -> "LONG"
-        qualificationOf<Float>() -> "FLOAT"
-        qualificationOf<Double>() -> "DOUBLE"
-        qualificationOf<ByteArray>() -> "BYTE_ARRAY"
-        qualificationOf<String>() -> "STRING_UTF8"
-        qualificationOf<Optional<Int>>() -> "OPTIONAL_VAR_INT"
+        typeNameStringOf<Boolean>() -> "BOOL"
+        typeNameStringOf<Byte>() -> "BYTE"
+        typeNameStringOf<Short>() -> "SHORT"
+        typeNameStringOf<Int>() -> "INT"
+        typeNameStringOf<Long>() -> "LONG"
+        typeNameStringOf<Float>() -> "FLOAT"
+        typeNameStringOf<Double>() -> "DOUBLE"
+        typeNameStringOf<ByteArray>() -> "BYTE_ARRAY"
+        typeNameStringOf<String>() -> "STRING_UTF8"
+        typeNameStringOf<Optional<Int>>() -> "OPTIONAL_VAR_INT"
         "net.minecraft.nbt.Tag" -> "TAG"
         "net.minecraft.nbt.CompoundTag" -> "COMPOUND_TAG"
         "org.joml.Vector3f" -> "TYPE_VECTOR3F"
@@ -185,15 +192,19 @@ context(types: TypeMirrors)
 private fun KSType.correspondCodecCalling(): CodeBlock {
     val cname = toClassName().toString()
     val qname = declaration.qualifiedName!!.asString()
+    if (isMarkedNullable) {
+        val dataType = makeNotNullable()
+        return dataType.correspondCodecCalling()
+    }
     val field = when (cname) {
-        qualificationOf<Boolean>() -> "BOOL"
-        qualificationOf<Byte>() -> "BYTE"
-        qualificationOf<Short>() -> "SHORT"
-        qualificationOf<Int>() -> "INT"
-        qualificationOf<Long>() -> "LONG"
-        qualificationOf<Float>() -> "FLOAT"
-        qualificationOf<Double>() -> "DOUBLE"
-        qualificationOf<String>() -> "STRING"
+        typeNameStringOf<Boolean>() -> "BOOL"
+        typeNameStringOf<Byte>() -> "BYTE"
+        typeNameStringOf<Short>() -> "SHORT"
+        typeNameStringOf<Int>() -> "INT"
+        typeNameStringOf<Long>() -> "LONG"
+        typeNameStringOf<Float>() -> "FLOAT"
+        typeNameStringOf<Double>() -> "DOUBLE"
+        typeNameStringOf<String>() -> "STRING"
         else -> null
     } ?: return CodeBlock.of("%L.%L", qname, AutoCodec.DEFAULT_NAME)
     return CodeBlock.of("%T.%L", types.Codec.toClassName(), field)
