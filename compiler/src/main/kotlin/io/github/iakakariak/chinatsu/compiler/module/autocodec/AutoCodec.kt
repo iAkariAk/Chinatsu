@@ -178,7 +178,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
                         }
                     }
                     .toList()
-                    .joinToCode(",\n", prefix = "(\n", suffix = "\n)")
+                    .joinToCode(",\n", prefix = "(\n⇥", suffix = "⇤\n)")
             )
             .build()
         val encode = FunSpec.builder("encode")
