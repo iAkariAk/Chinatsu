@@ -8,7 +8,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
-import io.github.iakakariak.chinatsu.compiler.module.generateCodecs
+import io.github.iakakariak.chinatsu.compiler.module.autocodec.generateCodecs
 
 class ChinatsuProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment) = ChinatsuProcessor(environment)

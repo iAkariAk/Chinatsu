@@ -42,7 +42,7 @@ fun onPickDESUWA() =
         player.mainHandItem
     }
 
-//@AutoCodec
+@AutoCodec
 @AutoStreamCodec
 @Serializable
 data class ChinatsuConfig(

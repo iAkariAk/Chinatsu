@@ -4,8 +4,9 @@ package io.github.iakakariak.chinatsu.compiler
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
-import com.google.devtools.ksp.symbol.KSDeclaration
-import com.google.devtools.ksp.symbol.KSFile
+import com.google.devtools.ksp.symbol.*
+import com.squareup.kotlinpoet.MemberName
+import com.squareup.kotlinpoet.ksp.toClassName
 
 internal inline fun <reified T : Annotation> annotation() =
     T::class.qualifiedName!!
@@ -27,3 +28,18 @@ val KSFile.jvmName: String
 
 val KSDeclaration.absolutePath: String
     get() = packageName.asString() + "." + simpleName.asString()
+
+
+fun KSPropertyDeclaration.toMemberName(): MemberName {
+    val parent = parent as? KSClassDeclaration
+    val isTopLevel = parent == null
+    return if (isTopLevel) MemberName(packageName.asString(), simpleName.asString())
+    else MemberName(parent.toClassName(), simpleName.asString())
+}
+
+fun KSFunctionDeclaration.toMemberName(): MemberName {
+    val parent = parent as? KSClassDeclaration
+    val isTopLevel = parent == null
+    return if (isTopLevel) MemberName(packageName.asString(), simpleName.asString())
+    else MemberName(parent.toClassName(), simpleName.asString())
+}

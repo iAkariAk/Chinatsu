@@ -17,4 +17,5 @@ class TypeMirrors(private val resolver: Resolver) {
     val FriendlyByteBuf = get("net.minecraft.network.FriendlyByteBuf")
     val ByteBufCodecs = get("net.minecraft.network.codec.ByteBufCodecs")
     val Event = get("net.fabricmc.fabric.api.event.Event")
+    val RecordCodecBuilder = get("com.mojang.serialization.codecs.RecordCodecBuilder")
 }
