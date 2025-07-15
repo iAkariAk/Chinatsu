@@ -67,6 +67,13 @@ private fun NotifyScope.generateForAnnotatedByCodec(source: KSFile, byCodecs: Li
     FileSpec.builder(source.packageName.asString(), source.fileNameWithoutExtension + "_Codecs")
         .apply { properties.forEach(::addProperty) }
         .addAliasedImport(JFunctionName, "JFunction")
+        .addAnnotation(
+            AnnotationSpec.builder(Suppress::class)
+                .addMember("%S", "RedundantVisibilityModifier")
+                .addMember("%S", "MoveLambdaOutsideParentheses")
+                .addMember("%S", "RedundantSamConstructor")
+                .build()
+        )
         .build()
         .writeTo(env.codeGenerator, false)
 }
