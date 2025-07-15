@@ -1,4 +1,4 @@
-package io.github.iakakariak.chinatsu.compiler.module
+package io.github.iakakariak.chinatsu.compiler.module.init
 
 import com.google.devtools.ksp.containingFile
 import com.google.devtools.ksp.getAnnotationsByType

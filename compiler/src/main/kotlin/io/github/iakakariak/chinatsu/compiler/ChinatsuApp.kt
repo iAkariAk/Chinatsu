@@ -7,16 +7,16 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.writeTo
 import io.github.iakakariak.chinatsu.annotation.ChinatsuApp
 import io.github.iakakariak.chinatsu.annotation.SideType
-import io.github.iakakariak.chinatsu.compiler.module.registerConfig
-import io.github.iakakariak.chinatsu.compiler.module.registerInit
-import io.github.iakakariak.chinatsu.compiler.module.registerSubscribeEvent
+import io.github.iakakariak.chinatsu.compiler.module.config.registerConfig
+import io.github.iakakariak.chinatsu.compiler.module.init.registerInit
+import io.github.iakakariak.chinatsu.compiler.module.listen.registerEventListen
 
 
 context(env: ProcessEnv)
 private fun ChinatsuAppSetupRegisterScope.registerSetup() {
     registerConfig()
     registerInit()
-    registerSubscribeEvent()
+    registerEventListen()
 }
 
 interface ChinatsuAppSetupRegisterScope : NotifyScope {

@@ -30,7 +30,7 @@ fun commonSetup() {
     logger.info("Chinatsu is launching with ${config.name}")
 }
 
-@SubscribeEvent("net.fabricmc.fabric.api.event.player.PlayerPickItemEvents.BLOCK")
+@Listen("net.fabricmc.fabric.api.event.player.PlayerPickItemEvents.BLOCK")
 fun onPick(player: ServerPlayer, pos: BlockPos, state: BlockState, requestIncludeData: Boolean): ItemStack {
     println(player.name)
     return player.mainHandItem

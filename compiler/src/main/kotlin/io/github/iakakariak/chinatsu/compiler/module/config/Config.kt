@@ -1,4 +1,4 @@
-package io.github.iakakariak.chinatsu.compiler.module
+package io.github.iakakariak.chinatsu.compiler.module.config
 
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
