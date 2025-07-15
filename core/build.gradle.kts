@@ -11,8 +11,9 @@ plugins {
     id("maven-publish")
 }
 
-version = project.property("mod_version") as String
-group = project.property("maven_group") as String
+
+val modId = rootProject.property("mod_id") as String
+val kotlinLoaderVersion = rootProject.property("kotlin_loader_version") as String
 
 base {
     archivesName.set(project.property("archives_base_name") as String)
@@ -24,9 +25,8 @@ java {
     withSourcesJar()
 }
 
-tasks.shadowJar {
-    isZip64 = true
-}
+
+val shadowInclude: Configuration by configurations.creating
 
 dependencies {
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
@@ -35,8 +35,9 @@ dependencies {
     modImplementation("net.fabricmc:fabric-language-kotlin:${project.property("kotlin_loader_version")}")
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
-    implementation(libs.kotlinx.serialization.json)
+    shadowInclude(libs.kotlinx.serialization.json)
     api(project(":annotation"))
+    shadowInclude(project(":annotation"))
     ksp(project(":compiler"))
 }
 
@@ -83,3 +84,66 @@ publishing {
     }
 }
 
+
+tasks {
+    shadowJar {
+        isZip64 = true
+        configurations = listOf(shadowInclude)
+        dependencies {
+            // exclude libraries in Fabric Language Kotlin
+            exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib:.*"))
+            exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk8:.*"))
+            exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk7:.*"))
+            exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
+
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-core:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-cbor-jvm:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:atomicfu-jvm:.*"))
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-datetime-jvm:.*"))
+
+            exclude(dependency("com.google.guava:guava:.*"))
+
+            exclude(dependency("org.apache.commons:commons-lang3:.*"))
+            exclude(dependency("org.apache.httpcomponents:httpclient:.*"))
+            exclude(dependency("org.apache.httpcomponents:httpcore:.*"))
+            exclude(dependency("org.slf4j:slf4j-api:.*"))
+            exclude(dependency("org.slf4j:slf4j-simple:.*"))
+            exclude(dependency("org.ow2.asm:.*:.*"))
+        }
+    }
+
+    jar {
+        dependsOn(shadowJar)
+        onlyIf { false }
+    }
+
+    processResources {
+        val properties = HashMap<String, Any>()
+        properties["modId"] = modId
+        properties["version"] = version
+        properties["fabricKotlinVersion"] = ">=$kotlinLoaderVersion"
+
+        properties.forEach { (a, b) -> inputs.property(a, b) }
+
+        filesNotMatching(
+            listOf(
+                "**/*.java",
+                "**/*.kt",
+                "**/sounds.json",
+                "**/lang/*.json",
+                "**/.cache/*",
+                "**/*.accesswidener",
+                "**/*.nbt",
+                "**/*.png",
+                "**/*.ogg",
+                "**/*.mixins.json"
+            )
+        ) {
+            expand(properties)
+        }
+    }
+}

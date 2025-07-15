@@ -13,8 +13,8 @@ plugins {
 
 
 allprojects {
-    group = "io.github.iakariak"
-    version = "0.0.1"
+    version = project.property("mod_version") as String
+    group = project.property("maven_group") as String
 }
 
 subprojects {
