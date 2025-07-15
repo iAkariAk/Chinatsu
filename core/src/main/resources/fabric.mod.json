@@ -11,7 +11,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "io.github.iakakariak.chinatsu.Chinatsu_ChinatsuApp"
+      "io.github.iakariak.chinatsu.Chinatsu_ChinatsuApp"
     ]
   },
   "mixins": [

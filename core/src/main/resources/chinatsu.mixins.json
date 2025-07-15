@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "io.github.iakakariak.chinatsu.mixin",
+  "package": "io.github.iakariak.chinatsu.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
   ],
