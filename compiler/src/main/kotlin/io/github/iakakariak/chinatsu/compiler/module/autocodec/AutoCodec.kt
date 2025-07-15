@@ -188,7 +188,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
                 StreamCodecPropertyInfo.fromClass(declaration, this)
                     .map { it ->
                         buildCodeBlock {
-                            add("%L = ", it.name)
+                            add("%N = ", it.name)
                             add(it.decodeBlock("buf"))
                         }
                     }

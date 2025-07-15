@@ -42,7 +42,7 @@ internal interface StreamCodecPropertyInfo : PropertyInfo<ByStreamCodec> {
         val type = declaration.type.resolve()
         return if (type.isMarkedNullable) {
             CodeBlock.of(
-                "%L.encode(%L, %T.ofNullable(%L.%L))",
+                "%L.encode(%N, %T.ofNullable(%N.%L))",
                 codecCalling,
                 bufName,
                 Optional::class.asClassName().parameterizedBy(type.makeNotNullable().toClassName()),
@@ -50,15 +50,15 @@ internal interface StreamCodecPropertyInfo : PropertyInfo<ByStreamCodec> {
                 name
             )
         } else {
-            CodeBlock.of("%L.encode(%L, %L.%L)", codecCalling, bufName, valueName, name)
+            CodeBlock.of("%L.encode(%N, %N.%N)", codecCalling, bufName, valueName, name)
         }
     }
 
 
     fun decodeBlock(bufName: String) = if (type.isMarkedNullable) {
-        CodeBlock.of("%L.decode(%L).orElse(null)", codecCalling, bufName)
+        CodeBlock.of("%L.decode(%N).orElse(null)", codecCalling, bufName)
     } else {
-        CodeBlock.of("%L.decode(%L)", codecCalling, bufName)
+        CodeBlock.of("%L.decode(%N)", codecCalling, bufName)
     }
 
 
@@ -90,7 +90,7 @@ internal interface CodecPropertyInfo : PropertyInfo<ByCodec> {
             declaration.toMemberName().reference()
         }
         return CodeBlock.of(
-            "%L.%L(%S).forGetter(%L)",
+            "%L.%N(%S).forGetter(%L)",
             codecCalling,
             if (type.isMarkedNullable) "optionalFieldOf" else "fieldOf",
             name,
