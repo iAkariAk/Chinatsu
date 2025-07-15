@@ -18,7 +18,7 @@ annotation class Comment(val content: String)
 
 open class CommentSerializer<T>(private val delegate: KSerializer<T>) : KSerializer<T> {
     override val descriptor =
-        SerialDescriptor("com.io.github.iakariak.dashboard.util.config.CommentSerializer", delegate.descriptor)
+        SerialDescriptor("io.github.iakariak.chinatsu.config.CommentSerializer", delegate.descriptor)
 
     override fun serialize(encoder: Encoder, value: T) {
         encoder as JsonEncoder
