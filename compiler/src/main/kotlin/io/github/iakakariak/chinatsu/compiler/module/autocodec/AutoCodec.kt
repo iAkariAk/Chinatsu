@@ -10,6 +10,7 @@ import com.squareup.kotlinpoet.ksp.writeTo
 import io.github.iakakariak.chinatsu.annotation.AutoCodec
 import io.github.iakakariak.chinatsu.annotation.AutoStreamCodec
 import io.github.iakakariak.chinatsu.compiler.*
+import java.util.*
 
 private val JFunctionName = java.util.function.Function::class.asClassName()
 
@@ -110,14 +111,28 @@ internal data class ByCodec(
         fun CodeBlock.Builder.addCurryConstructor(index: Int = 0) {
             if (index >= infos.size) {
                 val args = infos
-                    .mapIndexed { i, _ -> "a$i" }
-                    .joinToCode(transform = CodeBlock::of)
+                    .mapIndexed { i, info -> "a$i" to info }
+                    .joinToCode { (name, info) ->
+                        buildCodeBlock {
+                            add(name)
+                            if (info.type.isMarkedNullable) {
+                                add(".orElse(null)")
+                            }
+                        }
+                    }
                 add("%T(%L)\n", declaration.toClassName(), args)
                 return
             }
 
             val info = infos[index]
-            add("%T { a$index: %T ->\n", JFunctionName, info.type.toClassName())
+            val argType = if (info.type.isMarkedNullable) {
+                val t = info.type.makeNotNullable().toClassName()
+                Optional::class.asClassName().parameterizedBy(t)
+            } else {
+                info.type.toClassName()
+            }
+
+            add("%T { a$index: %T ->\n", JFunctionName, argType)
             indent()
             addCurryConstructor(index + 1)
             unindent()

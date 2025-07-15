@@ -83,13 +83,20 @@ internal interface CodecPropertyInfo : PropertyInfo<ByCodec> {
 
     }
 
-    fun descriptorBlock() = CodeBlock.of(
-        "%L.%L(%S).forGetter(%L)",
-        codecCalling,
-        if (type.isMarkedNullable) "optionalFieldOf" else "fieldOf",
-        name,
-        declaration.toMemberName().reference()
-    )
+    fun descriptorBlock(): CodeBlock {
+        val getter = if (type.isMarkedNullable) {
+            CodeBlock.of("{ obj -> %T.ofNullable(obj.%N) }", Optional::class.asClassName(), declaration.simpleName.asString())
+        } else {
+            declaration.toMemberName().reference()
+        }
+        return CodeBlock.of(
+            "%L.%L(%S).forGetter(%L)",
+            codecCalling,
+            if (type.isMarkedNullable) "optionalFieldOf" else "fieldOf",
+            name,
+            getter
+        )
+    }
 }
 
 
