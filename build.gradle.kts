@@ -59,7 +59,7 @@ subprojects {
 
             coordinates(
                 groupId = project.group.toString(),
-                artifactId = project.name,
+                artifactId = "chinatsu-${project.name}",
                 version = project.version.toString()
             )
 
