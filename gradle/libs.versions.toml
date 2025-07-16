@@ -1,5 +1,5 @@
 [versions]
-loom = "1.10.1"
+loom = "1.11.4"
 kotlin = "2.2.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization-json = "1.8.1"
