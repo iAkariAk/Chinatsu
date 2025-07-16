@@ -82,7 +82,7 @@ fun TypeMirrors.generateChinatsuApp() = env.createFile {
                 .onFalse { env.logger.error("The entry class must be `open`", it) }
         }
         .filter {
-            ModInitializer.asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
+            ModInitializer.resolve().asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
                 .onFalse {
                     env.logger.error("Your app must extend ModInitializer")
                 }
@@ -95,13 +95,13 @@ fun TypeMirrors.generateChinatsuApp() = env.createFile {
                 .addStatement("super.onInitialize()")
                 .addStatement(
                     "val env = %T.getInstance().environmentType",
-                    FabricLoader.toClassName()
+                    FabricLoader
                 )
                 .beginControlFlow("when (env)")
-                .beginControlFlow("%T.SERVER ->", EnvType.toClassName())
+                .beginControlFlow("%T.SERVER ->", EnvType)
                 .addStatement("c_setupServer()")
                 .endControlFlow()
-                .beginControlFlow("%T.CLIENT ->", EnvType.toClassName())
+                .beginControlFlow("%T.CLIENT ->", EnvType)
                 .addStatement("c_setupClient()")
                 .endControlFlow()
                 .endControlFlow()

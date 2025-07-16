@@ -17,9 +17,8 @@ class ChinatsuProcessorProvider : SymbolProcessorProvider {
 class ChinatsuProcessor(private val environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val mirrors = TypeMirrors(resolver)
-        val env = ProcessEnv(environment, resolver, mirrors)
-        with(mirrors) {
+        val env = ProcessEnv(environment, resolver)
+        with(TypeMirrors) {
             context(env) {
                 generateChinatsuApp()
                 generateCodecs()

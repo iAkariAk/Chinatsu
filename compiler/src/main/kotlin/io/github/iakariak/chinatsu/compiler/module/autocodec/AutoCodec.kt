@@ -31,7 +31,7 @@ fun TypeMirrors.generateCodecs() = env.createFile {
 context(env: ProcessEnv)
 private fun NotifyScope.generateForAnnotatedByCodec(source: KSFile, byCodecs: List<AnnotatedByCodec>) {
     notifyChange(source)
-    val properties = context(env.typeMirrors) {
+    val properties =
         byCodecs.flatMap { byCodec ->
             val pName = byCodec.qualifiedName
             val pImplName = "c_impl_$pName"
@@ -63,7 +63,7 @@ private fun NotifyScope.generateForAnnotatedByCodec(source: KSFile, byCodecs: Li
                 .build()
             listOf(impl, wrapper)
         }
-    }
+
     FileSpec.builder(source.packageName.asString(), source.fileNameWithoutExtension + "_Codecs")
         .apply { properties.forEach(::addProperty) }
         .addAliasedImport(JFunctionName, "JFunction")
@@ -91,16 +91,15 @@ internal sealed interface AnnotatedByCodec {
     val qualifiedName
         get() = name.replace("~", declaration.simpleName.asString())
 
-    context(types: TypeMirrors)
     fun type(type: TypeName): ParameterizedTypeName = when (this) {
-        is ByCodec -> types.Codec.toClassName()
+        is ByCodec -> TypeMirrors.Codec
             .parameterizedBy(type)
 
-        is ByStreamCodec -> types.StreamCodec.toClassName()
-            .parameterizedBy(types.FriendlyByteBuf.toClassName(), type)
+        is ByStreamCodec -> TypeMirrors.StreamCodec
+            .parameterizedBy(TypeMirrors.FriendlyByteBuf, type)
     }
 
-    context(env: ProcessEnv, types: TypeMirrors)
+    context(env: ProcessEnv)
     fun generateCodeBlock(): Pair<ParameterizedTypeName, Any>
 }
 
@@ -108,7 +107,7 @@ internal data class ByCodec(
     override val declaration: KSClassDeclaration,
     override val name: String
 ) : AnnotatedByCodec {
-    context(env: ProcessEnv, types: TypeMirrors)
+    context(env: ProcessEnv)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, Any> {
         val tType = declaration.toClassName()
         val type = type(tType)
@@ -171,7 +170,7 @@ internal data class ByCodec(
 
 
         val initializer = buildCodeBlock {
-            add("%T.create { instance ->\n", env.typeMirrors.RecordCodecBuilder.toClassName())
+            add("%T.create { instance ->\n", TypeMirrors.RecordCodecBuilder)
             addCurryApRecursively()
             add("}")
         }
@@ -182,13 +181,13 @@ internal data class ByCodec(
 
 internal data class ByStreamCodec(override val declaration: KSClassDeclaration, override val name: String) :
     AnnotatedByCodec {
-    context(env: ProcessEnv, types: TypeMirrors)
+    context(env: ProcessEnv)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, Any> {
         val tType = declaration.toClassName()
         val type = type(tType)
         val decode = FunSpec.builder("decode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter("buf", types.FriendlyByteBuf.toClassName())
+            .addParameter("buf", TypeMirrors.FriendlyByteBuf)
             .returns(tType)
             .addCode("return %T", tType)
             .addCode(
@@ -205,7 +204,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
             .build()
         val encode = FunSpec.builder("encode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter("buf", types.FriendlyByteBuf.toClassName())
+            .addParameter("buf", TypeMirrors.FriendlyByteBuf)
             .addParameter("value", tType)
             .addCode(
                 StreamCodecPropertyInfo.fromClass(declaration, this)

@@ -1,21 +1,21 @@
 package io.github.iakariak.chinatsu.compiler
 
 import com.google.devtools.ksp.getClassDeclarationByName
-import com.google.devtools.ksp.processing.Resolver
+import com.squareup.kotlinpoet.ClassName
 
 
-@Suppress("PropertyName")
-class TypeMirrors(private val resolver: Resolver) {
-    private fun get(qualifiedName: String) = resolver.getClassDeclarationByName(qualifiedName)!!
-
-    val FabricLoader = get("net.fabricmc.loader.api.FabricLoader")
-    val ModInitializer = get("net.fabricmc.api.ModInitializer")
-    val EnvType = get("net.fabricmc.api.EnvType")
-    val Configs = get("io.github.iakariak.chinatsu.config.Configs")
-    val Codec = get("com.mojang.serialization.Codec")
-    val StreamCodec = get("net.minecraft.network.codec.StreamCodec")
-    val FriendlyByteBuf = get("net.minecraft.network.FriendlyByteBuf")
-    val ByteBufCodecs = get("net.minecraft.network.codec.ByteBufCodecs")
-    val Event = get("net.fabricmc.fabric.api.event.Event")
-    val RecordCodecBuilder = get("com.mojang.serialization.codecs.RecordCodecBuilder")
+object TypeMirrors {
+    val FabricLoader = ClassName("net.fabricmc.loader.api", "FabricLoader")
+    val ModInitializer = ClassName("net.fabricmc.api", "ModInitializer")
+    val EnvType = ClassName("net.fabricmc.api", "EnvType")
+    val Configs = ClassName("io.github.iakariak.chinatsu.config", "Configs")
+    val Codec = ClassName("com.mojang.serialization", "Codec")
+    val StreamCodec = ClassName("net.minecraft.network.codec", "StreamCodec")
+    val FriendlyByteBuf = ClassName("net.minecraft.network", "FriendlyByteBuf")
+    val ByteBufCodecs = ClassName("net.minecraft.network.codec", "ByteBufCodecs")
+    val Event = ClassName("net.fabricmc.fabric.api.event", "Event")
+    val RecordCodecBuilder = ClassName("com.mojang.serialization.codecs", "RecordCodecBuilder")
 }
+
+context(env: ProcessEnv)
+fun ClassName.resolve() = env.resolver.getClassDeclarationByName(canonicalName)!!

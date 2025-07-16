@@ -31,7 +31,6 @@ private class NotifyScopeImpl : NotifyScope{
 class ProcessEnv(
     val environment: SymbolProcessorEnvironment,
     val resolver: Resolver,
-    val typeMirrors: TypeMirrors
 ) {
     val codeGenerator get() = environment.codeGenerator
     val logger get() = environment.logger

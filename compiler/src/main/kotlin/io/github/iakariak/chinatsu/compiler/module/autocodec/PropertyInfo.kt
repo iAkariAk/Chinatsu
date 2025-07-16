@@ -19,7 +19,6 @@ import io.github.iakariak.chinatsu.compiler.toMemberName
 import io.github.iakariak.chinatsu.compiler.typeNameStringOf
 import java.util.*
 
-context(types: TypeMirrors)
 internal fun StreamCodecPropertyInfo(
     declaration: KSPropertyDeclaration,
     source: ByStreamCodec
@@ -30,7 +29,6 @@ internal fun StreamCodecPropertyInfo(
 
 internal interface StreamCodecPropertyInfo : PropertyInfo<ByStreamCodec> {
     companion object {
-        context(types: TypeMirrors)
         fun fromClass(declaration: KSClassDeclaration, source: ByStreamCodec) =
             declaration.declarations
                 .filterIsInstance<KSPropertyDeclaration>()
@@ -64,7 +62,6 @@ internal interface StreamCodecPropertyInfo : PropertyInfo<ByStreamCodec> {
 
 }
 
-context(types: TypeMirrors)
 internal fun CodecPropertyInfo(
     declaration: KSPropertyDeclaration,
     source: ByCodec
@@ -75,7 +72,6 @@ internal fun CodecPropertyInfo(
 
 internal interface CodecPropertyInfo : PropertyInfo<ByCodec> {
     companion object {
-        context(types: TypeMirrors)
         fun fromClass(declaration: KSClassDeclaration, source: ByCodec) =
             declaration.declarations
                 .filterIsInstance<KSPropertyDeclaration>()
@@ -100,7 +96,6 @@ internal interface CodecPropertyInfo : PropertyInfo<ByCodec> {
 }
 
 
-context(types: TypeMirrors)
 private fun <T : AnnotatedByCodec> BasicPropertyInfo(
     declaration: KSPropertyDeclaration,
     source: T,
@@ -113,12 +108,10 @@ private fun <T : AnnotatedByCodec> BasicPropertyInfo(
             getCodecCalling(codecInfo, declaration, source.defaultCodecName, codecCallingFeedback)
         override val name = getName(codecInfo, declaration)
         override val declaration = declaration
-        override val types = types
     }
 }
 
 internal interface PropertyInfo<T : AnnotatedByCodec> {
-    val types: TypeMirrors
     val declaration: KSPropertyDeclaration
     val name: String
     val codecCalling: CodeBlock
@@ -127,7 +120,6 @@ internal interface PropertyInfo<T : AnnotatedByCodec> {
     val type get() = declaration.type.resolve()
 
     companion object {
-        context(types: TypeMirrors)
         fun getCodecCalling(
             codecInfo: CodecInfo?,
             declaration: KSPropertyDeclaration,
@@ -154,21 +146,20 @@ internal interface PropertyInfo<T : AnnotatedByCodec> {
     }
 }
 
-context(types: TypeMirrors)
 private fun KSType.correspondStreamCodecCalling(): CodeBlock {
     val cname = toClassName().toString()
     val qname = declaration.qualifiedName!!.asString()
     when {
         qname == qualificationOf<Optional<*>>() -> {
             val dataType = arguments.first().type!!.resolve()
-            return CodeBlock.of("%T.optional(%L)", types.ByteBufCodecs, dataType.correspondStreamCodecCalling())
+            return CodeBlock.of("%T.optional(%L)", TypeMirrors.ByteBufCodecs, dataType.correspondStreamCodecCalling())
         }
 
         isMarkedNullable -> {
             val dataType = makeNotNullable()
             return CodeBlock.of(
                 "%T.optional(%L)",
-                types.ByteBufCodecs.toClassName(),
+                TypeMirrors.ByteBufCodecs,
                 dataType.correspondStreamCodecCalling()
             )
         }
@@ -191,11 +182,10 @@ private fun KSType.correspondStreamCodecCalling(): CodeBlock {
         "com.mojang.authlib.GameProfile" -> "GAME_PROFILE"
         else -> null
     } ?: return CodeBlock.of("%L.%L", qname, AutoStreamCodec.DEFAULT_NAME)
-    return CodeBlock.of("%T.%L", types.ByteBufCodecs.toClassName(), field)
+    return CodeBlock.of("%T.%L", TypeMirrors.ByteBufCodecs, field)
 }
 
 
-context(types: TypeMirrors)
 private fun KSType.correspondCodecCalling(): CodeBlock {
     val cname = toClassName().toString()
     val qname = declaration.qualifiedName!!.asString()
@@ -214,6 +204,6 @@ private fun KSType.correspondCodecCalling(): CodeBlock {
         typeNameStringOf<String>() -> "STRING"
         else -> null
     } ?: return CodeBlock.of("%L.%L", qname, AutoCodec.DEFAULT_NAME)
-    return CodeBlock.of("%T.%L", types.Codec.toClassName(), field)
+    return CodeBlock.of("%T.%L", TypeMirrors.Codec, field)
 }
 
