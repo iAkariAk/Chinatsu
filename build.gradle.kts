@@ -32,7 +32,7 @@ subprojects {
                 freeCompilerArgs = listOf(
                     "-Xcontext-parameters",
                     "-Xcontext-sensitive-resolution",
-                    "-Xnested-type-aliases"
+                    "-Xnested-type-aliases",
                 )
             }
         }

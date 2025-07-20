@@ -7,11 +7,7 @@ import io.github.iakariak.chinatsu.config.Config
 import io.github.iakariak.chinatsu.config.Configs
 import kotlinx.serialization.Serializable
 import net.fabricmc.api.ModInitializer
-import net.fabricmc.fabric.api.event.player.PlayerPickItemEvents
-import net.minecraft.core.BlockPos
-import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.level.block.state.BlockState
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents
 import org.slf4j.LoggerFactory
 
 
@@ -30,17 +26,16 @@ fun commonSetup() {
     logger.info("Chinatsu is launching with ${config.name}")
 }
 
-@Listen("net.fabricmc.fabric.api.event.player.PlayerPickItemEvents.BLOCK")
-fun onPick(player: ServerPlayer, pos: BlockPos, state: BlockState, requestIncludeData: Boolean): ItemStack {
-    println(player.name)
-    return player.mainHandItem
+@Listen("net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.CHAT")
+fun onChatDesu(message: String) {
+    Chinatsu.logger.info("[CHAT] [LISTEN]: $message")
 }
 
 @Init
-fun onPickDESUWA() =
-    PlayerPickItemEvents.BLOCK.register { player: ServerPlayer, pos: BlockPos, state: BlockState, requestIncludeData: Boolean ->
-        player.mainHandItem
-    }
+fun onChat() = ClientSendMessageEvents.CHAT.register { message ->
+    Chinatsu.logger.info("[CHAT]: $message")
+}
+
 
 @AutoCodec
 @AutoStreamCodec
