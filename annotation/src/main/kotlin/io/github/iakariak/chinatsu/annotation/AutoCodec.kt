@@ -31,3 +31,31 @@ annotation class CodecInfo(
     val name: String = "~",
     val codecCalling: String = "~.^"
 )
+
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.PROPERTY)
+annotation class WithinInt(
+    val startInclusive: Int,
+    val endInclusive: Int
+)
+
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.PROPERTY)
+annotation class WithinLong(
+    val startInclusive: Long,
+    val endInclusive: Long
+)
+
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.PROPERTY)
+annotation class WithinFloat(
+    val startInclusive: Double,
+    val endInclusive: Double
+)
+
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.PROPERTY)
+annotation class WithinDouble(
+    val startInclusive: Double,
+    val endInclusive: Double
+)
