@@ -8,7 +8,7 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
-val HIDDEN_API = ClassName("", "__Chinatsu__")
+val HIDDEN_API = ClassName("", "__Chinatsu__${System.nanoTime()}")
 
 private fun ClassName.varClassName() =
     canonicalName.replace(".", "_")
@@ -90,7 +90,7 @@ internal abstract class Registry {
         fun method(methodName: String, returnType: TypeName, vararg params: TypeName): CodeBlock {
             val item = RegistryItem.Method(className, methodName, returnType, params.toList())
             items.add(item)
-            return CodeBlock.of("%T.%N", HIDDEN_API, item.invokeFunctionName)
+            return CodeBlock.of("%T.%N", HIDDEN_API, item.handleVarName)
         }
 
         fun field(fieldName: String, returnType: TypeName): CodeBlock {
@@ -146,10 +146,6 @@ private fun Registry.generateAccessor(): TypeSpec {
 }
 
 
-
-
-
-
 internal object HiddenApiAccessor : Registry() {
     object Codec : RClass(TypeMirrors.Codec, 1) {
         val validate = method(
@@ -172,6 +168,17 @@ fun TypeMirrors.generateHiddenApiAccessor() {
     val accessor = HiddenApiAccessor.generateAccessor()
     FileSpec.builder(HIDDEN_API)
         .addType(accessor)
+        .addAnnotation(
+            AnnotationSpec.builder(Suppress::class)
+                .addMember("%S", "ClassName")
+                .addMember("%S", "FunctionName")
+                .addMember("%S", "RemoveRedundantQualifierName")
+                .addMember("%S", "RedundantVisibilityModifier")
+                .addMember("%S", "SpellCheckingInspection")
+                .addMember("%S", "ObjectPropertyName")
+                .addMember("%S", "UNCHECKED_CAST")
+                .build()
+        )
         .build()
         .writeTo(env.codeGenerator, true)
     generated = true

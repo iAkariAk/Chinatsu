@@ -78,6 +78,7 @@ private fun NotifyScope.generateForAnnotatedByCodec(source: KSFile, byCodecs: Li
                 .addMember("%S", "RedundantVisibilityModifier")
                 .addMember("%S", "MoveLambdaOutsideParentheses")
                 .addMember("%S", "RedundantSamConstructor")
+                .addMember("%S", "UNCHECKED_CAST")
                 .build()
         )
         .build()

@@ -1,6 +1,8 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
 import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.typeNameOf
 import io.github.iakariak.chinatsu.annotation.WithinDouble
 import io.github.iakariak.chinatsu.annotation.WithinFloat
 import io.github.iakariak.chinatsu.annotation.WithinInt
@@ -53,12 +55,13 @@ internal class WithinLongModifier(withinInt: WithinLong) : StreamCodecModifier {
     override val encodeBlockTransformer = object : StreamCodecModifier.EncodeBlockTransformer {
         context(info: StreamCodecPropertyInfo)
         override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-            "%T.fromCodec(%L(%T.checkRange(%L, %L)))",
+            "%T.fromCodec(%L.invokeExact(%T.checkRange(%L, %L)) as %T)",
             TypeMirrors.ByteBufCodecs,
             HiddenApiAccessor.Codec.validate,
             TypeMirrors.Codec,
             withinInt.startInclusive,
             withinInt.endInclusive,
+            TypeMirrors.Codec.parameterizedBy(typeNameOf<Long>())
         )
     }
     override val decodeBlockTransformer = object : StreamCodecModifier.DecodeBlockTransformer {}

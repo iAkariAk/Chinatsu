@@ -117,7 +117,7 @@ private fun KSType.correspondStreamCodecCalling(
             typeNameStringOf<Byte>() -> "BYTE"
             typeNameStringOf<Short>() -> "SHORT"
             typeNameStringOf<Int>() -> "INT"
-            typeNameStringOf<Long>() -> "LONG"
+            typeNameStringOf<Long>() -> "VAR_LONG"
             typeNameStringOf<Float>() -> "FLOAT"
             typeNameStringOf<Double>() -> "DOUBLE"
             typeNameStringOf<ByteArray>() -> "BYTE_ARRAY"

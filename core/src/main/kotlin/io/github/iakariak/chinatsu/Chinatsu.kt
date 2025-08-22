@@ -45,7 +45,9 @@ data class ChinatsuConfig(
     val name: String = "Akari",
     @Comment("Less than 18 will be banned desuno.")
     @WithinInt(1, 100)
-    val age: Int? = 17
+    val age: Int? = 17,
+    @WithinLong(1, Long.MAX_VALUE)
+    val def: Long? = null
 ) : Config {
     companion object
 }
