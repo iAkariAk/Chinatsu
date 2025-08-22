@@ -20,6 +20,7 @@ class ChinatsuProcessor(private val environment: SymbolProcessorEnvironment) : S
         val env = ProcessEnv(environment, resolver)
         with(TypeMirrors) {
             context(env) {
+                generateHiddenApiAccessor()
                 generateChinatsuApp()
                 generateCodecs()
             }
