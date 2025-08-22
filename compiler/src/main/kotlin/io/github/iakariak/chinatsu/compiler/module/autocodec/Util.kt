@@ -12,7 +12,7 @@ internal object PropertyInfo {
         codecInfo: CodecInfo?,
         declaration: KSPropertyDeclaration,
         codecDefaultName: String,
-        feedback: (propertyType: KSType) -> CodeBlock
+        feedback: (propertyType: KSType) -> CodeBlock,
     ): CodeBlock {
         val pType = declaration.type.resolve()
         val pTypeDeclaration = pType.declaration as KSClassDeclaration

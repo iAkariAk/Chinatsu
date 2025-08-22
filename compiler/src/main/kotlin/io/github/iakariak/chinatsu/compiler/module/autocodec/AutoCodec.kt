@@ -10,7 +10,13 @@ import com.squareup.kotlinpoet.ksp.writeTo
 import io.github.iakariak.chinatsu.annotation.AutoCodec
 import io.github.iakariak.chinatsu.annotation.AutoStreamCodec
 import io.github.iakariak.chinatsu.compiler.*
+import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.CodecPropertyInfo
+import io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec.StreamCodecPropertyInfo
 import java.util.*
+
+// P: Parameter
+internal const val P_BUF_NAME = "buf"
+internal const val P_VALUE_NAME = "value"
 
 private val JFunctionName = java.util.function.Function::class.asClassName()
 
@@ -187,7 +193,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
         val type = type(tType)
         val decode = FunSpec.builder("decode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter("buf", TypeMirrors.FriendlyByteBuf)
+            .addParameter(P_BUF_NAME, TypeMirrors.FriendlyByteBuf)
             .returns(tType)
             .addCode("return %T", tType)
             .addCode(
@@ -195,7 +201,7 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
                     .map { it ->
                         buildCodeBlock {
                             add("%N = ", it.name)
-                            add(it.decodeBlock("buf"))
+                            add(it.decodeBlock())
                         }
                     }
                     .toList()
@@ -204,12 +210,12 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
             .build()
         val encode = FunSpec.builder("encode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter("buf", TypeMirrors.FriendlyByteBuf)
-            .addParameter("value", tType)
+            .addParameter(P_BUF_NAME, TypeMirrors.FriendlyByteBuf)
+            .addParameter(P_VALUE_NAME, tType)
             .addCode(
                 StreamCodecPropertyInfo.fromClass(declaration, this)
                     .map {
-                        it.encodeBlock("buf", "value")
+                        it.encodeBlock()
                     }
                     .toList()
                     .joinToCode("\n")

@@ -1,4 +1,4 @@
-package io.github.iakariak.chinatsu.compiler.module.autocodec
+package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -10,6 +10,8 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import io.github.iakariak.chinatsu.annotation.AutoCodec
 import io.github.iakariak.chinatsu.annotation.CodecInfo
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
+import io.github.iakariak.chinatsu.compiler.module.autocodec.ByCodec
+import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
 import io.github.iakariak.chinatsu.compiler.toMemberName
 import io.github.iakariak.chinatsu.compiler.typeNameStringOf
 import java.util.*
@@ -17,7 +19,7 @@ import java.util.*
 
 internal class CodecPropertyInfo(
     val declaration: KSPropertyDeclaration,
-    val source: ByCodec,
+    source: ByCodec,
 ) {
     companion object {
         fun fromClass(declaration: KSClassDeclaration, source: ByCodec) =
