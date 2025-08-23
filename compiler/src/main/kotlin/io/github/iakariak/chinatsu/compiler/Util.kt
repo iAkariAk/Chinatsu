@@ -13,8 +13,6 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-typealias JFunction<T, R> = java.util.function.Function<T, R>
-
 internal inline fun <reified T : Annotation> annotation() =
     T::class.qualifiedName!!
 

@@ -8,9 +8,9 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
-import io.github.iakariak.chinatsu.annotation.*
+import io.github.iakariak.chinatsu.annotation.AutoStreamCodec
+import io.github.iakariak.chinatsu.annotation.CodecInfo
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
-import io.github.iakariak.chinatsu.compiler.module.autocodec.ByStreamCodec
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_BUF_NAME
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_VALUE_NAME
 import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
@@ -18,14 +18,6 @@ import io.github.iakariak.chinatsu.compiler.qualificationOf
 import io.github.iakariak.chinatsu.compiler.transformIf
 import io.github.iakariak.chinatsu.compiler.typeNameStringOf
 import java.util.*
-import kotlin.reflect.KClass
-
-private val builtinModifiers = mapOf<KClass<out Annotation>, (Annotation) -> StreamCodecModifier>(
-    WithinInt::class to { within -> WithinIntModifier(within as WithinInt) },
-    WithinLong::class to { within -> WithinLongModifier(within as WithinLong) },
-    WithinFloat::class to { within -> WithinFloatModifier(within as WithinFloat) },
-    WithinDouble::class to { within -> WithinDoubleModifier(within as WithinDouble) }
-)
 
 internal class StreamCodecPropertyInfo(
     val declaration: KSPropertyDeclaration,
@@ -48,11 +40,7 @@ internal class StreamCodecPropertyInfo(
         { it.correspondStreamCodecCalling(transform) }
     )
 
-    private val modifier = builtinModifiers.mapNotNull { (annotationClass, factory) ->
-        declaration.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
-            factory(annotation)
-        }
-    }.composed()
+    val modifier = PropertyInfo.scanModifiers(declaration, streamCodecBuiltinModifiers).composed()
 
     fun encodeBlock(): CodeBlock = context(this) {
         val type = declaration.type.resolve()
@@ -88,7 +76,7 @@ internal class StreamCodecPropertyInfo(
 
 
 private fun KSType.correspondStreamCodecCalling(
-    transform: ((CodeBlock) -> CodeBlock)? = null
+    transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
     val cname = toClassName().toString()
     val qname = declaration.qualifiedName!!.asString()
@@ -132,6 +120,6 @@ private fun KSType.correspondStreamCodecCalling(
         } ?: return@run CodeBlock.of("%L.%L", qname, AutoStreamCodec.DEFAULT_NAME)
         CodeBlock.of("%T.%L", TypeMirrors.ByteBufCodecs, field)
     }
-    return codecCalling.transformIf({ transform != null }, transform!!)
+    return transform(codecCalling)
 }
 

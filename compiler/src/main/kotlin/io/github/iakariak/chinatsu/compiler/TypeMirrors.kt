@@ -2,6 +2,8 @@ package io.github.iakariak.chinatsu.compiler
 
 import com.google.devtools.ksp.getClassDeclarationByName
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.asClassName
+import java.util.function.Function as JavaFunction
 
 
 object TypeMirrors {
@@ -15,6 +17,9 @@ object TypeMirrors {
     val ByteBufCodecs = ClassName("net.minecraft.network.codec", "ByteBufCodecs")
     val Event = ClassName("net.fabricmc.fabric.api.event", "Event")
     val RecordCodecBuilder = ClassName("com.mojang.serialization.codecs", "RecordCodecBuilder")
+
+
+    val JFunction = JavaFunction::class.asClassName()
 }
 
 context(env: ProcessEnv)
