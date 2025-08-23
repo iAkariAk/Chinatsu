@@ -1,9 +1,11 @@
-package io.github.iakariak.chinatsu.compiler
+package io.github.iakariak.chinatsu.compiler.hiddenapi
+
 
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.jvm.jvmStatic
-import com.squareup.kotlinpoet.ksp.writeTo
+import io.github.iakariak.chinatsu.compiler.erased
+import io.github.iakariak.chinatsu.compiler.plus
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -80,6 +82,16 @@ internal sealed interface RegistryItem {
 
 }
 
+internal interface MethodCallings {
+    val varCalling: CodeBlock
+    fun invokeCalling(vararg args: CodeBlock): CodeBlock
+}
+
+internal interface FieldCallings {
+    val varCalling: CodeBlock
+    fun getCalling(self: CodeBlock): CodeBlock
+}
+
 internal abstract class Registry {
     abstract class RClass(
         val className: ClassName,
@@ -87,10 +99,13 @@ internal abstract class Registry {
     ) {
         val items = mutableListOf<RegistryItem>()
 
-        fun method(methodName: String, returnType: TypeName, vararg params: TypeName): CodeBlock {
+        fun method(methodName: String, returnType: TypeName, vararg params: TypeName): MethodCallings {
             val item = RegistryItem.Method(className, methodName, returnType, params.toList())
             items.add(item)
-            return CodeBlock.of("%T.%N", HIDDEN_API, item.handleVarName)
+            return object : MethodCallings {
+                override val varCalling = CodeBlock.of("%T.%N", HIDDEN_API, item.handleVarName)
+                override fun invokeCalling(vararg args: CodeBlock) = CodeBlock.of("")
+            }
         }
 
         fun field(fieldName: String, returnType: TypeName): CodeBlock {
@@ -106,7 +121,7 @@ internal abstract class Registry {
 
 }
 
-private fun Registry.generateAccessor(): TypeSpec {
+internal fun Registry.generateAccessor(): TypeSpec {
     val lookup = PropertySpec.builder("lookup", typeNameOf<MethodHandles.Lookup>(), KModifier.PRIVATE)
         .jvmStatic()
         .initializer("%T.lookup()", typeNameOf<MethodHandles>())
@@ -141,45 +156,9 @@ private fun Registry.generateAccessor(): TypeSpec {
         .addProperty(lookup)
         .addProperties(classProperties)
         .addAccessors()
+        .addKdoc("This object is applied over accessing hidden Minecraft Api")
+        .addKdoc("This is because Chinatsu as a compiler that cannot use access widener")
+        .addKdoc("The naming regular is __Chinatsu__ + <nano>")
         .build()
     return accessor
-}
-
-
-internal object HiddenApiAccessor : Registry() {
-    object Codec : RClass(TypeMirrors.Codec, 1) {
-        val validate = method(
-            "validate",
-            TypeMirrors.Codec.parameterizedBy(STAR),
-            JFunction::class.asTypeName().parameterizedBy(STAR, STAR)
-        )
-    }
-
-    init {
-        Codec.validate
-    }
-}
-
-private var generated = false
-
-context(env: ProcessEnv)
-fun TypeMirrors.generateHiddenApiAccessor() {
-    if (generated) return
-    val accessor = HiddenApiAccessor.generateAccessor()
-    FileSpec.builder(HIDDEN_API)
-        .addType(accessor)
-        .addAnnotation(
-            AnnotationSpec.builder(Suppress::class)
-                .addMember("%S", "ClassName")
-                .addMember("%S", "FunctionName")
-                .addMember("%S", "RemoveRedundantQualifierName")
-                .addMember("%S", "RedundantVisibilityModifier")
-                .addMember("%S", "SpellCheckingInspection")
-                .addMember("%S", "ObjectPropertyName")
-                .addMember("%S", "UNCHECKED_CAST")
-                .build()
-        )
-        .build()
-        .writeTo(env.codeGenerator, true)
-    generated = true
 }

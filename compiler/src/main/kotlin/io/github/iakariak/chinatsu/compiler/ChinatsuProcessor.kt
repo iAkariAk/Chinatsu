@@ -8,6 +8,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
+import io.github.iakariak.chinatsu.compiler.hiddenapi.generateHiddenApiAccessor
 import io.github.iakariak.chinatsu.compiler.module.autocodec.generateCodecs
 
 class ChinatsuProcessorProvider : SymbolProcessorProvider {
