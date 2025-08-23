@@ -48,7 +48,7 @@ internal class WithinDoubleModifier(range: WithinDouble) : StreamCodecModifier {
     }
     override val decodeBlockTransformer = object : StreamCodecModifier.DecodeBlockTransformer {}
 }
-internal class WithinLongModifier(withinInt: WithinLong) : StreamCodecModifier {
+internal class WithinLongModifier(range: WithinLong) : StreamCodecModifier {
     override val encodeBlockTransformer = object : StreamCodecModifier.EncodeBlockTransformer {
         context(info: StreamCodecPropertyInfo)
         override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
@@ -56,8 +56,8 @@ internal class WithinLongModifier(withinInt: WithinLong) : StreamCodecModifier {
             TypeMirrors.ByteBufCodecs,
             TypeMirrors.Codec,
             TypeMirrors.Codec,
-            withinInt.startInclusive,
-            withinInt.endInclusive,
+            range.startInclusive,
+            range.endInclusive,
         )
     }
     override val decodeBlockTransformer = object : StreamCodecModifier.DecodeBlockTransformer {}
