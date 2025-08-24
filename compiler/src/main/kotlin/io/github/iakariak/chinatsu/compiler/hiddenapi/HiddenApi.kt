@@ -156,8 +156,8 @@ internal fun Registry.generateAccessor(): TypeSpec {
         .addProperty(lookup)
         .addProperties(classProperties)
         .addAccessors()
-        .addKdoc("This object is applied over accessing hidden Minecraft Api")
-        .addKdoc("This is because Chinatsu as a compiler that cannot use access widener")
+        .addKdoc("This object is applied over accessing hidden Minecraft Api\n")
+        .addKdoc("This is because Chinatsu as a compiler that cannot use access widener\n")
         .addKdoc("The naming regular is __Chinatsu__ + <nano>")
         .build()
     return accessor

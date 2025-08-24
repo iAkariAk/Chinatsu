@@ -65,15 +65,15 @@ internal data class ByCodec(
 
             val info = infosReversed[index]
             add("instance.ap(\n")
-            indent()
-            if (index == infosReversed.lastIndex) {
-                addCurryConstructor()
+            withIndent {
+                if (index == infosReversed.lastIndex) {
+                    addCurryConstructor()
+                }
+                addCurryApRecursively(index + 1)
+                add(",\n")
+                add(info.getterDescriptorBlock())
+                add("\n")
             }
-            addCurryApRecursively(index + 1)
-            add(",\n")
-            add(info.getterDescriptorBlock())
-            add("\n")
-            unindent()
             add(")")
             if (index == 0) {
                 add("\n")
@@ -82,8 +82,10 @@ internal data class ByCodec(
 
 
         val initializer = buildCodeBlock {
-            add("%T.create { instance ->\n", TypeMirrors.RecordCodecBuilder)
-            addCurryApRecursively()
+            add("\n%T.create { instance ->\n", TypeMirrors.RecordCodecBuilder)
+            withIndent {
+                addCurryApRecursively()
+            }
             add("}")
         }
         return type to initializer

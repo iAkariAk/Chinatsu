@@ -27,8 +27,7 @@ private val attachedWithin = run {
         .addParameter("startInclusive", v)
         .addParameter("endInclusive", v)
         .returns(targetType)
-
-        .addStatement(
+        .addCode(
             $$"""
                 |val checker = { num: %T ->
                 |  check (num in startInclusive..endInclusive) {
@@ -36,6 +35,7 @@ private val attachedWithin = run {
                 |  }
                 |  num
                 |}
+                |
                 """.trimMargin(), v
         )
         .addStatement("return this.map(checker, checker)")
