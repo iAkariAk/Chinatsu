@@ -5,7 +5,9 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import io.github.iakariak.chinatsu.annotation.AutoStreamCodec
@@ -31,21 +33,27 @@ internal class StreamCodecPropertyInfo(
 
     }
 
+    val modifier = PropertyInfo.scanModifiers(declaration, streamCodecBuiltinModifiers).composed()
     val codecInfo = declaration.getAnnotationsByType(CodecInfo::class).firstOrNull()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val type get() = declaration.type.resolve()
 
-    fun codeCalling(transform: (CodeBlock) -> CodeBlock) = PropertyInfo.getCodecCalling(
+    private val codeCalling = PropertyInfo.getCodecCalling(
         codecInfo, declaration, source.defaultCodecName,
-        { it.correspondStreamCodecCalling(transform) }
+        { it.correspondStreamCodecCalling({ modifier.transformCodecCalling(it) }) }
     )
 
-    val modifier = PropertyInfo.scanModifiers(declaration, streamCodecBuiltinModifiers).composed()
+    private val codeCallingVarName = "c_$name"
+
+    fun codecCallingDefineBlock() =
+        PropertySpec.builder(codeCallingVarName, source.typeOf(type.toClassName()), KModifier.PRIVATE)
+            .initializer(codeCalling)
+            .build()
 
     fun encodeBlock(): CodeBlock = context(this) {
         val type = declaration.type.resolve()
         val arg = CodeBlock.of("%N.%N", P_VALUE_NAME, name)
-        val transformedArg = modifier.encodeBlockTransformer.transformArg(arg)
+        val transformedArg = modifier.transformArg(arg)
         val nullableArg = transformedArg.transformIf({ type.isMarkedNullable }) {
             CodeBlock.of(
                 "%T.ofNullable(%N.%N)",
@@ -56,8 +64,8 @@ internal class StreamCodecPropertyInfo(
         }
 
         return CodeBlock.of(
-            "%L.encode(%N, %L)",
-            codeCalling { modifier.encodeBlockTransformer.transformCodecCalling(it) },
+            "%N.encode(%N, %L)",
+            codeCallingVarName,
             P_BUF_NAME,
             nullableArg
         )
@@ -66,11 +74,11 @@ internal class StreamCodecPropertyInfo(
 
     fun decodeBlock(): CodeBlock {
         val result = CodeBlock.of(
-            "%L.decode(%N)".transformIf({ type.isMarkedNullable }) { "$it.orElse(null)" },
-            codeCalling { modifier.decodeBlockTransformer.transformCodecCalling(it) },
+            "%N.decode(%N)".transformIf({ type.isMarkedNullable }) { "$it.orElse(null)" },
+            codeCallingVarName,
             P_BUF_NAME
         )
-        return modifier.decodeBlockTransformer.transformResult(result)
+        return modifier.transformResult(result)
     }
 }
 

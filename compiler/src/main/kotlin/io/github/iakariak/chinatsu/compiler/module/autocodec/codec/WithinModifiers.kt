@@ -7,53 +7,29 @@ import io.github.iakariak.chinatsu.annotation.WithinInt
 import io.github.iakariak.chinatsu.annotation.WithinLong
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
 
-internal class WithinIntModifier(range: WithinInt) : CodecModifier {
-    override val descriptorBlockTransformer = object : CodecModifier.DescriptorBlockTransformer {
-        context(info: CodecPropertyInfo)
-        override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-            "%T.intRange(%L, %L)",
-            TypeMirrors.Codec,
-            range.startInclusive,
-            range.endInclusive,
-        )
-    }
+private class WithinNumberModifier<N : Number>(
+    val startInclusive: N,
+    val endInclusive: N
+) : CodecModifier {
+    context(info: CodecPropertyInfo)
+    override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
+        "%L.validate(%T.checkRange(%L, %L))",
+        codecCalling,
+        TypeMirrors.Codec,
+        startInclusive,
+        endInclusive,
+    )
 }
 
-internal class WithinFloatModifier(range: WithinFloat) : CodecModifier {
-    override val descriptorBlockTransformer = object : CodecModifier.DescriptorBlockTransformer {
-        context(info: CodecPropertyInfo)
-        override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-            "%T.floatRange(%L, %L)",
-            TypeMirrors.Codec,
-            range.startInclusive,
-            range.endInclusive,
-        )
-    }
-}
+internal class WithinIntModifier(range: WithinInt) :
+    CodecModifier by WithinNumberModifier(range.startInclusive, range.endInclusive)
 
-internal class WithinDoubleModifier(range: WithinDouble) : CodecModifier {
-    override val descriptorBlockTransformer = object : CodecModifier.DescriptorBlockTransformer {
-        context(info: CodecPropertyInfo)
-        override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-            "%T.doubleRange(%L, %L)",
-            TypeMirrors.Codec,
-            range.startInclusive,
-            range.endInclusive,
-        )
-    }
-}
+internal class WithinFloatModifier(range: WithinFloat) :
+    CodecModifier by WithinNumberModifier(range.startInclusive, range.endInclusive)
 
+internal class WithinDoubleModifier(range: WithinDouble) :
+    CodecModifier by WithinNumberModifier(range.startInclusive, range.endInclusive)
 
-internal class WithinLongModifier(range: WithinLong) : CodecModifier {
-    override val descriptorBlockTransformer = object : CodecModifier.DescriptorBlockTransformer {
-        context(info: CodecPropertyInfo)
-        override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-            "%T.LONG.validate(%T.checkRange(%L, %L))",
-            TypeMirrors.Codec,
-            TypeMirrors.Codec,
-            range.startInclusive,
-            range.endInclusive,
-        )
-    }
-}
+internal class WithinLongModifier(range: WithinLong) :
+    CodecModifier by WithinNumberModifier(range.startInclusive, range.endInclusive)
 

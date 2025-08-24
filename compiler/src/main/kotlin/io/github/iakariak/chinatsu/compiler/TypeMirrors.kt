@@ -13,6 +13,7 @@ object TypeMirrors {
     val Configs = ClassName("io.github.iakariak.chinatsu.config", "Configs")
     val Codec = ClassName("com.mojang.serialization", "Codec")
     val StreamCodec = ClassName("net.minecraft.network.codec", "StreamCodec")
+    val ByteBuf = ClassName("io.netty.buffer", "ByteBuf")
     val FriendlyByteBuf = ClassName("net.minecraft.network", "FriendlyByteBuf")
     val ByteBufCodecs = ClassName("net.minecraft.network.codec", "ByteBufCodecs")
     val Event = ClassName("net.fabricmc.fabric.api.event", "Event")

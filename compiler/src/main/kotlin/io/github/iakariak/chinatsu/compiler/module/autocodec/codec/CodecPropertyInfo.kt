@@ -35,7 +35,7 @@ internal class CodecPropertyInfo(
 
     val codeCalling = PropertyInfo.getCodecCalling(
         codecInfo, declaration, source.defaultCodecName,
-        { it.correspondCodecCalling { modifier.descriptorBlockTransformer.transformCodecCalling(it) } }
+        { it.correspondCodecCalling { modifier.transformCodecCalling(it) } }
     )
 
     fun constructorDescriptorBlock(argName: String): CodeBlock {
@@ -45,12 +45,12 @@ internal class CodecPropertyInfo(
                 add(".orElse(null)")
             }
         }
-        return modifier.descriptorBlockTransformer.transformConstructor(arg)
+        return modifier.transformConstructor(arg)
     }
 
     fun getterDescriptorBlock(): CodeBlock {
         val arg = CodeBlock.of("obj.%N", declaration.simpleName.asString())
-        val transformedArg = modifier.descriptorBlockTransformer.transformGetting(arg)
+        val transformedArg = modifier.transformGetting(arg)
         val getting = transformedArg.transformIf({ type.isMarkedNullable }) {
             CodeBlock.of(
                 "%T.ofNullable(%L)",

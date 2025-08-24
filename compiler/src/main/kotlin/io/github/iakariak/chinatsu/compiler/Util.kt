@@ -13,6 +13,8 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
+internal val EmptyList = emptyList<Nothing>()
+
 internal inline fun <reified T : Annotation> annotation() =
     T::class.qualifiedName!!
 

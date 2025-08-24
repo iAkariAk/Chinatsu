@@ -10,6 +10,8 @@ import io.github.iakariak.chinatsu.compiler.TypeMirrors
 import io.github.iakariak.chinatsu.compiler.module.autocodec.AnnotatedByCodec
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_BUF_NAME
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_VALUE_NAME
+import io.github.iakariak.chinatsu.compiler.transformIf
+import java.util.*
 import kotlin.reflect.KClass
 
 internal val streamCodecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annotation) -> StreamCodecModifier>(
@@ -22,19 +24,30 @@ internal val streamCodecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annota
 internal data class ByStreamCodec(override val declaration: KSClassDeclaration, override val name: String) :
     AnnotatedByCodec {
     override val defaultCodecName = AutoStreamCodec.DEFAULT_NAME
-    override fun typeOf(type: TypeName) = TypeMirrors.StreamCodec.parameterizedBy(TypeMirrors.FriendlyByteBuf, type)
+    override fun typeOf(type: TypeName) = TypeMirrors.StreamCodec
+        .parameterizedBy(
+            TypeMirrors.ByteBuf,
+            type.transformIf(TypeName::isNullable) {
+                Optional::class.asClassName().parameterizedBy(it.copy(nullable = false))
+            }
+        )
 
     context(env: ProcessEnv)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, Any> {
         val tType = declaration.toClassName()
         val type = typeOf(tType)
+        val infos = StreamCodecPropertyInfo.fromClass(declaration, this).toList()
+        val mergedDependencies = infos.mapNotNull { it.modifier.dependencies }.merged()
+        val attachedFunctions = mergedDependencies.attachedFunctions
+        val attachedProperties = mergedDependencies.attachedProperties
+        val codecCallingDefs = infos.map(StreamCodecPropertyInfo::codecCallingDefineBlock)
         val decode = FunSpec.builder("decode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter(P_BUF_NAME, TypeMirrors.FriendlyByteBuf)
+            .addParameter(P_BUF_NAME, TypeMirrors.ByteBuf)
             .returns(tType)
             .addCode("return %T", tType)
             .addCode(
-                StreamCodecPropertyInfo.fromClass(declaration, this)
+                infos
                     .map {
                         buildCodeBlock {
                             add("%N = ", it.name)
@@ -47,10 +60,10 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
             .build()
         val encode = FunSpec.builder("encode")
             .addModifiers(KModifier.OVERRIDE)
-            .addParameter(P_BUF_NAME, TypeMirrors.FriendlyByteBuf)
+            .addParameter(P_BUF_NAME, TypeMirrors.ByteBuf)
             .addParameter(P_VALUE_NAME, tType)
             .addCode(
-                StreamCodecPropertyInfo.fromClass(declaration, this)
+                infos
                     .map {
                         it.encodeBlock()
                     }
@@ -60,6 +73,9 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
             .build()
         val initializer = TypeSpec.anonymousClassBuilder()
             .addSuperinterface(type)
+            .addProperties(codecCallingDefs)
+            .addProperties(attachedProperties)
+            .addFunctions(attachedFunctions)
             .addFunction(decode)
             .addFunction(encode)
             .build()
