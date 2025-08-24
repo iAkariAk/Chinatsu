@@ -50,7 +50,7 @@ private class WithinNumberModifier<N : Number>(val startInclusive: N, val endInc
     StreamCodecModifier {
     override val dependencies get() = WithinDependencies
 
-    context(info: StreamCodecPropertyInfo)
+    context(info: StreamCodecPropertyInfo?)
     override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
         "%L.%N(%L, %L)",
         codecCalling,

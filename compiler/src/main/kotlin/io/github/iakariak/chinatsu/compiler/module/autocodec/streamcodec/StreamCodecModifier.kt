@@ -3,9 +3,16 @@ package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.PropertySpec
+import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.CodecPropertyInfo
 
 internal interface StreamCodecModifier {
-    context(info: StreamCodecPropertyInfo)
+    context(info: CodecPropertyInfo)
+    fun transformCodecType(type: CodeBlock): CodeBlock = type
+
+    // The reason why info can be null:
+    // Principally transformation (esp. expend) codec-calling not depend on info.
+    // Since most fundamental codec-calling is already constructed in PropertyInfo using info.
+    context(info: StreamCodecPropertyInfo?)
     fun transformCodecCalling(codecCalling: CodeBlock): CodeBlock = codecCalling
 
     /**
@@ -41,7 +48,11 @@ internal fun Iterable<StreamCodecModifierDependencies>.merged() = fold(StreamCod
 }
 
 internal fun List<StreamCodecModifier>.composed(): StreamCodecModifier = object : StreamCodecModifier {
-    context(info: StreamCodecPropertyInfo)
+    context(info: CodecPropertyInfo)
+    override fun transformCodecType(type: CodeBlock) =
+        fold(type) { ace, e -> e.transformCodecType(ace) }
+
+    context(info: StreamCodecPropertyInfo?)
     override fun transformCodecCalling(codecCalling: CodeBlock) =
         fold(codecCalling) { ace, e -> e.transformCodecCalling(ace) }
 

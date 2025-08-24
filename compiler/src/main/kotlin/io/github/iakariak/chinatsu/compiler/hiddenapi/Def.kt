@@ -12,7 +12,7 @@ internal object HiddenApiAccessor : Registry() { /*...*/}
 private var generated = false
 
 context(env: ProcessEnv)
-fun TypeMirrors.generateHiddenApiAccessor() {
+internal fun TypeMirrors.generateHiddenApiAccessor() {
     if (generated) return
     val accessor = HiddenApiAccessor.generateAccessor()
     FileSpec.builder(HIDDEN_API)

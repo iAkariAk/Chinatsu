@@ -1,4 +1,4 @@
-@file:OptIn(KspExperimental::class, ExperimentalContracts::class)
+@file:OptIn(KspExperimental::class, ExperimentalContracts::class, ExperimentalTypeInference::class)
 
 package io.github.iakariak.chinatsu.compiler
 
@@ -12,6 +12,7 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.experimental.ExperimentalTypeInference
 
 internal val EmptyList = emptyList<Nothing>()
 
@@ -21,6 +22,9 @@ internal inline fun <reified T : Annotation> annotation() =
 internal inline fun Boolean.onTrue(block: () -> Unit): Boolean = also { if (it) block() }
 internal inline fun Boolean.onFalse(block: () -> Unit): Boolean = also { if (!it) block() }
 internal inline fun <R> R.onNull(block: () -> Unit): R = also { it ?: block() }
+
+@OverloadResolutionByLambdaReturnType
+@JvmName("transformIf")
 internal inline fun <R> R.transformIf(predicate: (R) -> Boolean, transform: (R) -> R): R {
     contract {
         callsInPlace(predicate, InvocationKind.EXACTLY_ONCE)
@@ -28,6 +32,17 @@ internal inline fun <R> R.transformIf(predicate: (R) -> Boolean, transform: (R) 
     }
     return if (predicate(this)) transform(this) else this
 }
+
+@OverloadResolutionByLambdaReturnType
+@JvmName("transformNullableIf")
+internal inline fun <R> R.transformIf(predicate: (R) -> Boolean, transform: (R) -> R?): R? {
+    contract {
+        callsInPlace(predicate, InvocationKind.EXACTLY_ONCE)
+        callsInPlace(transform, InvocationKind.AT_MOST_ONCE)
+    }
+    return if (predicate(this)) transform(this) else this
+}
+
 
 @Suppress("NOTHING_TO_INLINE")
 internal inline operator fun <T> T.plus(others: List<T>) = buildList<T> {

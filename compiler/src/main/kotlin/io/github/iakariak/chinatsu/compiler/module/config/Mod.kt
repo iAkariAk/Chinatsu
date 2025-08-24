@@ -18,7 +18,7 @@ fun ChinatsuAppSetupRegisterScope.registerConfig() {
                 .onFalse { env.logger.error("The configs must be a object") }
         }
         .filter {
-            TypeMirrors.Configs.resolve().asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
+            TypeMirrors.Configs.resolved().asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
                 .onFalse { env.logger.error("Your config cannot extends class Configs") }
         }
         .forEach {

@@ -11,7 +11,7 @@ private class WithinNumberModifier<N : Number>(
     val startInclusive: N,
     val endInclusive: N
 ) : CodecModifier {
-    context(info: CodecPropertyInfo)
+    context(info: CodecPropertyInfo?)
     override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
         "%L.validate(%T.checkRange(%L, %L))",
         codecCalling,

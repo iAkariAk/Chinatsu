@@ -33,28 +33,28 @@ annotation class CodecInfo(
 )
 
 @Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinInt(
     val startInclusive: Int,
     val endInclusive: Int
 )
 
 @Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinLong(
     val startInclusive: Long,
     val endInclusive: Long
 )
 
 @Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinFloat(
     val startInclusive: Double,
     val endInclusive: Double
 )
 
 @Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinDouble(
     val startInclusive: Double,
     val endInclusive: Double

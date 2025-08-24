@@ -1,6 +1,7 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec
 
 import com.google.devtools.ksp.getAnnotationsByType
+import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -16,14 +17,15 @@ internal object PropertyInfo {
         codecDefaultName: String,
         feedback: (propertyType: KSType) -> CodeBlock,
     ): CodeBlock {
-        val pType = declaration.type.resolve()
-        val pTypeDeclaration = pType.declaration as KSClassDeclaration
-        val ptqName = pTypeDeclaration.qualifiedName!!.asString()
+        val type = declaration.type
+        val rType = type.resolve()
+        val rTypeDeclaration = rType.declaration as KSClassDeclaration
+        val rqName = rTypeDeclaration.qualifiedName!!.asString()
 
         return codecInfo?.codecCalling
-            ?.replace("~", ptqName)
+            ?.replace("~", rqName)
             ?.replace("^", codecDefaultName)
-            ?.let(CodeBlock::of) ?: feedback(pType)
+            ?.let(CodeBlock::of) ?: feedback(rType)
     }
 
     fun getName(
@@ -34,9 +36,9 @@ internal object PropertyInfo {
         return codecInfo?.name?.replace("~", pName) ?: pName
     }
 
-    fun <T> scanModifiers(declaration: KSPropertyDeclaration, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) = builtinModifiers.mapNotNull{
+    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) = builtinModifiers.mapNotNull{
         (annotationClass, factory) ->
-        declaration.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
+        annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
             factory(annotation)
         }
     }

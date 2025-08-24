@@ -17,7 +17,7 @@ internal const val P_BUF_NAME = "buf"
 internal const val P_VALUE_NAME = "value"
 
 context(env: ProcessEnv)
-fun TypeMirrors.generateCodecs() = env.createFile {
+internal fun TypeMirrors.generateCodecs() = env.createFile {
     val codecClass = env.resolver.getSymbolsWithAnnotation(annotation<AutoCodec>())
         .filterIsInstance<KSClassDeclaration>()
         .map { ByCodec(it, it.getAnnotationsByType(AutoCodec::class).first().name) }

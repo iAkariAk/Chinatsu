@@ -3,9 +3,13 @@ package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 import com.squareup.kotlinpoet.CodeBlock
 
 internal interface CodecModifier {
-
-
     context(info: CodecPropertyInfo)
+    fun transformCodecType(type: CodeBlock): CodeBlock = type
+
+    // The reason why info can be null:
+    // Principally transformation (esp. expend) codec-calling not depend on info.
+    // Since most fundamental codec-calling is already constructed in PropertyInfo using info.
+    context(info: CodecPropertyInfo?)
     fun transformCodecCalling(codecCalling: CodeBlock): CodeBlock = codecCalling
 
     /**
@@ -24,6 +28,10 @@ internal interface CodecModifier {
 
 internal fun List<CodecModifier>.composed(): CodecModifier = object : CodecModifier {
     context(info: CodecPropertyInfo)
+    override fun transformCodecType(type: CodeBlock) =
+        fold(type) { ace, e -> e.transformCodecCalling(ace) }
+
+    context(info: CodecPropertyInfo?)
     override fun transformCodecCalling(codecCalling: CodeBlock) =
         fold(codecCalling) { ace, e -> e.transformCodecCalling(ace) }
 

@@ -4,6 +4,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.*
 import io.github.iakariak.chinatsu.compiler.ProcessEnv
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
@@ -43,11 +44,11 @@ internal data class ByCodec(
             }
 
             val info = infos[index]
-            val argType = if (info.type.isMarkedNullable) {
-                val t = info.type.makeNotNullable().toClassName()
+            val argType = if (info.resolvedType.isMarkedNullable) {
+                val t = info.resolvedType.makeNotNullable().toClassName()
                 Optional::class.asClassName().parameterizedBy(t)
             } else {
-                info.type.toClassName()
+                info.resolvedType.toTypeName()
             }
 
             add("%T {  %N/* arg$index */: %T ->\n", TypeMirrors.JFunction, info.name, argType)

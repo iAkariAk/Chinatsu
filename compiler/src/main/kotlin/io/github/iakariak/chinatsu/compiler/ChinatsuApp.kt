@@ -63,7 +63,7 @@ private class ChinatsuAppSetupRegisterScopeImpl : ChinatsuAppSetupRegisterScope,
 }
 
 context(env: ProcessEnv)
-fun TypeMirrors.generateChinatsuApp() = env.createFile {
+internal fun TypeMirrors.generateChinatsuApp() = env.createFile {
     val register = ChinatsuAppSetupRegisterScopeImpl()
     register.apply { registerSetup() }
     fun setupFunc(sideType: SideType) = FunSpec.builder("c_setup$sideType")
@@ -82,7 +82,7 @@ fun TypeMirrors.generateChinatsuApp() = env.createFile {
                 .onFalse { env.logger.error("The entry class must be `open`", it) }
         }
         .filter {
-            ModInitializer.resolve().asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
+            ModInitializer.resolved().asStarProjectedType().isAssignableFrom(it.asStarProjectedType())
                 .onFalse {
                     env.logger.error("Your app must extend ModInitializer")
                 }
