@@ -35,9 +35,8 @@ internal data class ByCodec(
         fun CodeBlock.Builder.addCurryConstructor(index: Int = 0) {
             if (index >= infos.size) {
                 val args = infos
-                    .mapIndexed { i, info -> "a$i" to info }
-                    .joinToCode { (name, info) ->
-                        info.constructorDescriptorBlock(name)
+                    .joinToCode { info ->
+                        info.constructorDescriptorBlock()
                     }
                 add("%T(%L)\n", declaration.toClassName(), args)
                 return
@@ -51,7 +50,7 @@ internal data class ByCodec(
                 info.type.toClassName()
             }
 
-            add("%T { a$index: %T ->\n", TypeMirrors.JFunction, argType)
+            add("%T {  %N/* arg$index */: %T ->\n", TypeMirrors.JFunction, info.name, argType)
             indent()
             addCurryConstructor(index + 1)
             unindent()

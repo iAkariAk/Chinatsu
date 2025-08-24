@@ -38,9 +38,9 @@ internal class CodecPropertyInfo(
         { it.correspondCodecCalling { modifier.transformCodecCalling(it) } }
     )
 
-    fun constructorDescriptorBlock(argName: String): CodeBlock {
+    fun constructorDescriptorBlock(): CodeBlock {
         val arg = buildCodeBlock {
-            add(argName)
+            add(name)
             if (type.isMarkedNullable) {
                 add(".orElse(null)")
             }
