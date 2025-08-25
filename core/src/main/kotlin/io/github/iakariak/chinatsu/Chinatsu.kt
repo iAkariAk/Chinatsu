@@ -47,11 +47,8 @@ data class ChinatsuConfig(
     val age: Int? = 17,
     @WithinLong(1, Long.MAX_VALUE)
     val def: Long? = null,
+    @DelegateCodec
     val fullname: Pair<String, String> = "yoshikawa" to "chinatsu",
-    val complex: Pair<String,Map<String, @WithinDouble(
-        0.0,
-        1.0
-    ) Double>> = "" to emptyMap(),
 ) : Config {
     companion object
 }

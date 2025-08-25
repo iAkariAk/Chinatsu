@@ -37,7 +37,7 @@ internal class CodecPropertyInfo(
         codecInfo, declaration, source.defaultCodecName
     ) {
         context(env) {
-            it.correspondCodecCalling(declaration.type) {
+            it.correspondCodecCalling(declaration, declaration.type) {
                 modifier.transformCodecCalling(it)
             }
         }
@@ -75,7 +75,8 @@ internal class CodecPropertyInfo(
 
 context(env: ProcessEnv)
 internal fun KSType.correspondCodecCalling(
-    source: KSTypeReference? = null,
+    propertySource: KSPropertyDeclaration? = null,
+    typeSource: KSTypeReference? = null,
     transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
     val qname = declaration.qualifiedName!!.asString()
@@ -86,7 +87,7 @@ internal fun KSType.correspondCodecCalling(
             isMarkedNullable -> makeNotNullable()
             else -> return@run
         }
-        return dataType.correspondCodecCalling(source, transform)
+        return dataType.correspondCodecCalling(propertySource, typeSource, transform)
     }
 
     val isDPPair = qname == TypeMirrors.DFPair.canonicalName
@@ -96,8 +97,8 @@ internal fun KSType.correspondCodecCalling(
         val firstType = firstRef.resolve()
         val secondRef = arguments[1].type
         val secondType = secondRef!!.resolve()
-        val firstCodecCalling = firstType.correspondCodecCalling(firstRef, transform)
-        val secondCodecCalling = secondType.correspondCodecCalling(secondRef, transform)
+        val firstCodecCalling = firstType.correspondCodecCalling(null, firstRef, transform)
+        val secondCodecCalling = secondType.correspondCodecCalling(null, secondRef, transform)
         return CodeBlock.of("%T.pair(%L, %L)", TypeMirrors.Codec, firstCodecCalling, secondCodecCalling)
             .transformIf({ isKPair }) {
                 CodeBlock.of(
@@ -113,7 +114,7 @@ internal fun KSType.correspondCodecCalling(
         return CodeBlock.of(
             "%T.list(%L)",
             TypeMirrors.Codec,
-            tRef.resolve().correspondCodecCalling(tRef, transform)
+            tRef.resolve().correspondCodecCalling(null, tRef, transform)
         )
     }
 
@@ -124,8 +125,8 @@ internal fun KSType.correspondCodecCalling(
         return CodeBlock.of(
             "%T.unboundedMap(%L, %L)",
             TypeMirrors.Codec,
-            kRef.resolve().correspondCodecCalling(kRef, transform),
-            vRef.resolve().correspondCodecCalling(vRef, transform)
+            kRef.resolve().correspondCodecCalling(null, kRef, transform),
+            vRef.resolve().correspondCodecCalling(null, vRef, transform)
         )
     }
 
@@ -144,8 +145,8 @@ internal fun KSType.correspondCodecCalling(
         } ?: return@run CodeBlock.of("%L.%L", qname, AutoCodec.DEFAULT_NAME)
         CodeBlock.of("%T.%L", TypeMirrors.Codec, field)
     }
-    return transform(codecCalling.transformIf({ source != null }) {
-        val modifier = PropertyInfo.scanModifiers(source!!, codecBuiltinModifiers).composed()
+    return transform(codecCalling.transformIf({ typeSource != null }) {
+        val modifier = PropertyInfo.scanModifiers(typeSource!!, codecBuiltinModifiers).composed()
         context(null) {
             modifier.transformCodecCalling(it)
         }

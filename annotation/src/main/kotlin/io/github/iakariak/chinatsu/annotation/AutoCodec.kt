@@ -1,3 +1,12 @@
+/**
+ * There are some annotation in which some merely are available on nether `Codec` or `StreamCodec`
+ * and some are available on both.
+ *
+ * Essentially, annotating on the value-parameter directly
+ * is the same as annotating on the outermost type
+ * just a shorthand form.
+ */
+
 package io.github.iakariak.chinatsu.annotation
 
 @Retention(AnnotationRetention.SOURCE)
@@ -17,6 +26,8 @@ annotation class AutoStreamCodec(val name: String = DEFAULT_NAME) {
 }
 
 /**
+ * Available on Codec & StreamCodec
+ * 
  * To specify how to codec your property
  *
  * @param name There is placeholder ~
@@ -32,6 +43,15 @@ annotation class CodecInfo(
     val codecCalling: String = "~.^"
 )
 
+
+/**
+ * Available on Codec & StreamCodec
+ * 
+ * To limit the value into a range
+ *
+ * @param  startInclusive start of range (inclusive)
+ * @param  endInclusive end of range (inclusive)
+ */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinInt(
@@ -39,6 +59,14 @@ annotation class WithinInt(
     val endInclusive: Int
 )
 
+/**
+ * Available on Codec & StreamCodec
+ * 
+ * To limit the value into a range
+ *
+ * @param  startInclusive start of range (inclusive)
+ * @param  endInclusive end of range (inclusive)
+ */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinLong(
@@ -46,6 +74,14 @@ annotation class WithinLong(
     val endInclusive: Long
 )
 
+/**
+ * Available on Codec & StreamCodec
+ * 
+ * To limit the value into a range
+ *
+ * @param  startInclusive start of range (inclusive)
+ * @param  endInclusive end of range (inclusive)
+ */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinFloat(
@@ -53,9 +89,26 @@ annotation class WithinFloat(
     val endInclusive: Double
 )
 
+/**
+ * Available on Codec & StreamCodec
+ * 
+ * To limit the value into a range
+ *
+ * @param  startInclusive start of range (inclusive)
+ * @param  endInclusive end of range (inclusive)
+ */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
 annotation class WithinDouble(
     val startInclusive: Double,
     val endInclusive: Double
 )
+
+/**
+ * Available on StreamCodec
+ *
+ * Delegate the StreamCodec into Codec via `StreamCodec.fromCodec`
+ */
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.VALUE_PARAMETER)
+annotation class DelegateCodec

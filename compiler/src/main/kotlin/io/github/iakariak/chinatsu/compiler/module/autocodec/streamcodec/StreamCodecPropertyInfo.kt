@@ -14,6 +14,7 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.AutoStreamCodec
 import io.github.iakariak.chinatsu.annotation.CodecInfo
+import io.github.iakariak.chinatsu.annotation.DelegateCodec
 import io.github.iakariak.chinatsu.compiler.*
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_BUF_NAME
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_VALUE_NAME
@@ -44,7 +45,7 @@ internal class StreamCodecPropertyInfo(
         codecInfo, declaration, source.defaultCodecName
     ) {
         context(env) {
-            it.correspondStreamCodecCalling(declaration.type) {
+            it.correspondStreamCodecCalling(declaration, declaration.type) {
                 modifier.transformCodecCalling(it)
             }
         }
@@ -91,12 +92,19 @@ internal class StreamCodecPropertyInfo(
 
 context(env: ProcessEnv)
 internal fun KSType.correspondStreamCodecCalling(
+    propertySource: KSPropertyDeclaration? = null,
     source: KSTypeReference? = null,
     transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
     fun delegateByCodec(): CodeBlock {
-        val codec = correspondCodecCalling(source)
+        val codec = correspondCodecCalling(propertySource, source)
         return CodeBlock.of("%T.fromCodec(%L)", TypeMirrors.ByteBufCodecs, codec)
+    }
+
+    source?.let {
+        if (it.getAnnotationsByType(DelegateCodec::class).toList().isNotEmpty()) {
+            return delegateByCodec()
+        }
     }
 
     val qname = declaration.qualifiedName!!.asString()
@@ -110,7 +118,7 @@ internal fun KSType.correspondStreamCodecCalling(
         return CodeBlock.of(
             "%T.optional(%L)",
             TypeMirrors.ByteBufCodecs,
-            dataType.correspondStreamCodecCalling(source, transform)
+            dataType.correspondStreamCodecCalling(propertySource, source, transform)
         )
     }
 
@@ -126,7 +134,7 @@ internal fun KSType.correspondStreamCodecCalling(
         return CodeBlock.of(
             "%T.list().apply(%L)",
             TypeMirrors.ByteBufCodecs,
-            tRef.resolve().correspondStreamCodecCalling(tRef, transform)
+            tRef.resolve().correspondStreamCodecCalling(null, tRef, transform)
         )
     }
 
