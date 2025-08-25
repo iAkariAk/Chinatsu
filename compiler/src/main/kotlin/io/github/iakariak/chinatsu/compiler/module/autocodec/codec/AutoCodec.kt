@@ -4,12 +4,10 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
-import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.*
 import io.github.iakariak.chinatsu.compiler.ProcessEnv
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
 import io.github.iakariak.chinatsu.compiler.module.autocodec.AnnotatedByCodec
-import java.util.*
 import kotlin.reflect.KClass
 
 internal val codecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annotation) -> CodecModifier>(
@@ -28,67 +26,36 @@ internal data class ByCodec(
 
     context(env: ProcessEnv)
     override fun generateCodeBlock(): Pair<ParameterizedTypeName, Any> {
-        val tType = declaration.toClassName()
+        val className = declaration.toClassName()
+        val tType = className
         val type = typeOf(tType)
         val infos = CodecPropertyInfo.fromClass(declaration, this@ByCodec).toList()
-        val infosReversed = infos.reversed()
-
-        fun CodeBlock.Builder.addCurryConstructor(index: Int = 0) {
-            if (index >= infos.size) {
-                val args = infos
-                    .joinToCode { info ->
-                        info.constructorDescriptorBlock()
-                    }
-                add("%T(%L)\n", declaration.toClassName(), args)
-                return
-            }
-
-            val info = infos[index]
-            val argType = if (info.resolvedType.isMarkedNullable) {
-                val t = info.resolvedType.makeNotNullable().toClassName()
-                Optional::class.asClassName().parameterizedBy(t)
-            } else {
-                info.resolvedType.toTypeName()
-            }
-
-            add("%T {  %N/* arg$index */: %T ->\n", TypeMirrors.JFunction, info.name, argType)
-            indent()
-            addCurryConstructor(index + 1)
-            unindent()
-            add("}")
-            if (index >= 1) {
-                add("\n")
-            }
-        }
-
-        fun CodeBlock.Builder.addCurryApRecursively(index: Int = 0) {
-            if (index >= infosReversed.size) return
-
-            val info = infosReversed[index]
-            add("instance.ap(\n")
-            withIndent {
-                if (index == infosReversed.lastIndex) {
-                    addCurryConstructor()
-                }
-                addCurryApRecursively(index + 1)
-                add(",\n")
-                add(info.getterDescriptorBlock())
-                add("\n")
-            }
-            add(")")
-            if (index == 0) {
-                add("\n")
-            }
-        }
-
-
         val initializer = buildCodeBlock {
-            add("\n%T.create { instance ->\n", TypeMirrors.RecordCodecBuilder)
+            val instance = CodeBlock.of("instance")
+            add("\n%T.create { %L ->\n", TypeMirrors.RecordCodecBuilder, instance)
             withIndent {
-                addCurryApRecursively()
+                val args = infos.map { it.getterDescriptorBlock() }
+                val pointed = buildCodeBlock {
+                    add("%L.point { %L ->\n", instance,infos.joinToCode { CodeBlock.of("%N", it.name) })
+                    withIndent {
+                        add("%T(\n", className)
+                        withIndent {
+                            infos.forEach { info ->
+                                add("%N = %L,\n", info.name, info.constructorDescriptorBlock())
+                            }
+                        }
+                        add(")\n")
+                    }
+                    add("}")
+                }
+                val ap = CodecAttachment.ap(infos.size, instance, pointed, args)
+                add(ap)
             }
             add("}")
         }
+        env.attach(CodecAttachment)
         return type to initializer
     }
 }
+
+

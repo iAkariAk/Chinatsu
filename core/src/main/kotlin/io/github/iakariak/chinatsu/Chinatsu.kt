@@ -48,14 +48,10 @@ data class ChinatsuConfig(
     @WithinLong(1, Long.MAX_VALUE)
     val def: Long? = null,
     val fullname: Pair<String, String> = "yoshikawa" to "chinatsu",
-    val complex: Pair<String, Pair<@WithinInt(1, 100) Int, Map<String, @WithinDouble(
+    val complex: Pair<String,Map<String, @WithinDouble(
         0.0,
         1.0
-    ) Double>>> = "yoshikawa" to (1 to mapOf("umezonokokami" to .5)),
-    val natural: List<Pair<String?, Pair<String?, Pair<String?, Pair<String?, Pair<String?, Pair<List<Pair<Int?, Long?>>, Double?>>>>>>> = emptyList(),
-    val _1: @WithinInt(1,1) Int = 1,
-    val _2: @WithinInt(2,2) Int = 2,
-    val _3: @WithinInt(3,3) Int = 3
+    ) Double>> = "" to emptyMap(),
 ) : Config {
     companion object
 }

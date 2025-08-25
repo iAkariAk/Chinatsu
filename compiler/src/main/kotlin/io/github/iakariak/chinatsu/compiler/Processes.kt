@@ -28,12 +28,20 @@ private class NotifyScopeImpl : NotifyScope{
 }
 
 
+interface Attachment {
+    context(env: ProcessEnv)
+    fun attach()
+}
+
+
 class ProcessEnv(
     val environment: SymbolProcessorEnvironment,
     val resolver: Resolver,
 ) {
     val codeGenerator get() = environment.codeGenerator
     val logger get() = environment.logger
+    private val _attachments = mutableSetOf<Attachment>()
+    val attachments = _attachments as Set<Attachment>
 
     fun createFile(block: NotifyScope.() -> Unit) {
         val scope = object : NotifyScope {
@@ -49,4 +57,7 @@ class ProcessEnv(
         scope.apply(block)
     }
 
+    fun attach(attachment: Attachment) {
+        _attachments.add(attachment)
+    }
 }

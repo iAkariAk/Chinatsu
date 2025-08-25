@@ -22,7 +22,10 @@ internal object TypeMirrors {
     val RecordCodecBuilder = ClassName("com.mojang.serialization.codecs", "RecordCodecBuilder")
 
     val DFPair = ClassName("com.mojang.datafixers.util", "Pair")
-
+    val DFApp = ClassName("com.mojang.datafixers.kinds", "App")
+    val DFK1 = ClassName("com.mojang.datafixers.kinds", "K1")
+    val DFApplicative = ClassName("com.mojang.datafixers.kinds", "Applicative")
+    val DFApplicativeMu = ClassName("com.mojang.datafixers.kinds", "Applicative", "Mu")
     val JFunction = JavaFunction::class.asClassName()
 }
 

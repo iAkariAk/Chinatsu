@@ -24,6 +24,10 @@ class ChinatsuProcessor(private val environment: SymbolProcessorEnvironment) : S
                 generateHiddenApiAccessor()
                 generateChinatsuApp()
                 generateCodecs()
+
+                env.attachments.forEach {
+                    it.attach()
+                }
             }
         }
 
