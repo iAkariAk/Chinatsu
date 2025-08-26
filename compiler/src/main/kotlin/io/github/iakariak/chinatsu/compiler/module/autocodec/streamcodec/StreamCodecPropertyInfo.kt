@@ -1,10 +1,7 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
 import com.google.devtools.ksp.getAnnotationsByType
-import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.KSTypeReference
+import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -93,19 +90,22 @@ internal class StreamCodecPropertyInfo(
 context(env: ProcessEnv)
 internal fun KSType.correspondStreamCodecCalling(
     propertySource: KSPropertyDeclaration? = null,
-    source: KSTypeReference? = null,
+    typeSource: KSTypeReference? = null,
     transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
     fun delegateByCodec(): CodeBlock {
-        val codec = correspondCodecCalling(propertySource, source)
+        val codec = correspondCodecCalling(propertySource, typeSource)
         return CodeBlock.of("%T.fromCodec(%L)", TypeMirrors.ByteBufCodecs, codec)
     }
 
-    source?.let {
-        if (it.getAnnotationsByType(DelegateCodec::class).toList().isNotEmpty()) {
-            return delegateByCodec()
+    val delegateByCodec = { annotated: KSAnnotated ->
+        if (annotated.getAnnotationsByType(DelegateCodec::class).toList().isNotEmpty()) {
+            delegateByCodec()
         }
     }
+
+    typeSource?.let(delegateByCodec)
+    propertySource?.let(delegateByCodec)
 
     val qname = declaration.qualifiedName!!.asString()
 
@@ -118,7 +118,7 @@ internal fun KSType.correspondStreamCodecCalling(
         return CodeBlock.of(
             "%T.optional(%L)",
             TypeMirrors.ByteBufCodecs,
-            dataType.correspondStreamCodecCalling(propertySource, source, transform)
+            dataType.correspondStreamCodecCalling(propertySource, typeSource, transform)
         )
     }
 
@@ -163,8 +163,8 @@ internal fun KSType.correspondStreamCodecCalling(
         } ?: return@run CodeBlock.of("%L.%L", qname, AutoStreamCodec.DEFAULT_NAME)
         CodeBlock.of("%T.%L", TypeMirrors.ByteBufCodecs, field)
     }
-    return transform(codecCalling.transformIf({ source != null }) {
-        val modifier = PropertyInfo.scanModifiers(source!!, streamCodecBuiltinModifiers).composed()
+    return transform(codecCalling.transformIf({ typeSource != null }) {
+        val modifier = PropertyInfo.scanModifiers(typeSource!!, streamCodecBuiltinModifiers).composed()
         context(null) {
             modifier.transformCodecCalling(it)
         }
