@@ -11,7 +11,7 @@ private const val MODULE_NAME = "config"
 
 context(env: ProcessEnv)
 fun ChinatsuAppSetupRegisterScope.registerConfig() {
-    env.resolver.getSymbolsWithAnnotation(annotation<CConfigs>())
+    env.resolver.getSymbolsWithAnnotation<CConfigs>()
         .filterIsInstance<KSClassDeclaration>()
         .filter {
             (it.classKind == ClassKind.OBJECT)

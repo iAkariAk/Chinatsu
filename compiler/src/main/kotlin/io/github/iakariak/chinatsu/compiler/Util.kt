@@ -4,6 +4,7 @@ package io.github.iakariak.chinatsu.compiler
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
+import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterizedTypeName
@@ -16,9 +17,8 @@ import kotlin.experimental.ExperimentalTypeInference
 import kotlin.reflect.KClass
 
 internal val EmptyList = emptyList<Nothing>()
-
-internal inline fun <reified T : Annotation> annotation() =
-    T::class.qualifiedName!!
+internal val EmptySet = emptySet<Nothing>()
+internal val EmptyMap = emptyMap<Nothing, Nothing>()
 
 internal inline fun Boolean.onTrue(block: () -> Unit): Boolean = also { if (it) block() }
 internal inline fun Boolean.onFalse(block: () -> Unit): Boolean = also { if (!it) block() }
@@ -79,6 +79,9 @@ internal fun KSFunctionDeclaration.toMemberName(): MemberName {
     return if (isTopLevel) MemberName(packageName.asString(), simpleName.asString())
     else MemberName(parent.toClassName(), simpleName.asString())
 }
+
+internal inline fun <reified T: Annotation> Resolver.getSymbolsWithAnnotation() =
+    getSymbolsWithAnnotation(qualificationOf<T>())
 
 internal inline fun <reified T : Annotation> KSAnnotated.hasAnnotation() =
     hasAnnotation(T::class)

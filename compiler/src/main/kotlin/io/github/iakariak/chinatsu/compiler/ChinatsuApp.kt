@@ -75,7 +75,7 @@ internal fun TypeMirrors.generateChinatsuApp() = env.createFile {
     val serverSetup = setupFunc(SideType.Server)
     val commonSetup = setupFunc(SideType.Common)
 
-    env.resolver.getSymbolsWithAnnotation(annotation<ChinatsuApp>())
+    env.resolver.getSymbolsWithAnnotation<ChinatsuApp>()
         .filterIsInstance<KSClassDeclaration>()
         .filter {
             (Modifier.OPEN in it.modifiers)

@@ -1,6 +1,5 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
-import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.KModifier
@@ -34,7 +33,7 @@ internal class StreamCodecPropertyInfo(
     }
 
     val modifier = PropertyInfo.scanModifiers(declaration, streamCodecBuiltinModifiers).composed()
-    val codecInfo = declaration.getAnnotationsByType(CodecInfo::class).firstOrNull()
+    val codecInfo = declaration.findAnnotation<CodecInfo>()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val resolvedType get() = declaration.type.resolve()
 

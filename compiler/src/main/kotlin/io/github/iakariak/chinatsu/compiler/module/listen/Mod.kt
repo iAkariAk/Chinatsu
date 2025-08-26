@@ -11,7 +11,7 @@ import io.github.iakariak.chinatsu.compiler.*
 
 context(env: ProcessEnv)
 fun ChinatsuAppSetupRegisterScope.registerEventListen() {
-    env.resolver.getSymbolsWithAnnotation(annotation<Listen>())
+    env.resolver.getSymbolsWithAnnotation<Listen>()
         .filterIsInstance<KSFunctionDeclaration>()
         .map { it.getAnnotationsByType(Listen::class).first() to it }
         .filter { (_, d) ->

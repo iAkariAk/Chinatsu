@@ -1,6 +1,5 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
-import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -29,7 +28,7 @@ internal class CodecPropertyInfo(
     }
 
     val modifier = PropertyInfo.scanModifiers(declaration, codecBuiltinModifiers).composed()
-    val codecInfo = declaration.getAnnotationsByType(CodecInfo::class).firstOrNull()
+    val codecInfo = declaration.findAnnotation<CodecInfo>()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val resolvedType get() = declaration.type.resolve()
 

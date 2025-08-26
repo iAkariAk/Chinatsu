@@ -34,7 +34,7 @@ fun ChinatsuAppSetupRegisterScope.registerInit() {
 
 context(env: ProcessEnv)
 private fun NotifyScope.generateSideInits(): List<Pair<SideType, CodeBlock>> {
-    val inits = env.resolver.getSymbolsWithAnnotation(annotation<Init>()).map {
+    val inits = env.resolver.getSymbolsWithAnnotation<Init>().map {
         it.getAnnotationsByType(Init::class).first().side to it
     }.mapNotNull { (side, declaration) ->
         declaration.containingFile?.let { notifyChange(it) }
