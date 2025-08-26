@@ -18,7 +18,7 @@ object CodecAttachment : Attachment {
 
     fun ap(n: Int, app: CodeBlock, pointed: CodeBlock, args: List<CodeBlock>): CodeBlock {
         requireN(n)
-        return CodeBlock.of("%T.ap$n(\n⇥%L,\n%L,\n%L⇤\n)\n", attachmentName, app, pointed, args.joinToCode())
+        return CodeBlock.of("%T.ap$n(\n⇥%L,\n%L,\n%L⇤\n)\n", attachmentName, app, pointed, args.joinToCode(", \n"))
     }
 
     private var isAttached = false
