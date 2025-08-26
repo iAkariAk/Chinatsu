@@ -14,18 +14,21 @@ internal object PropertyInfo {
     fun getCodecCalling(
         codecInfo: CodecInfo?,
         declaration: KSPropertyDeclaration,
+        inferCodecCalling: (KSType) -> CodeBlock?,
         codecDefaultName: String,
         feedback: (propertyType: KSType) -> CodeBlock,
     ): CodeBlock {
-        val type = declaration.type
-        val rType = type.resolve()
-        val rTypeDeclaration = rType.declaration as KSClassDeclaration
-        val rqName = rTypeDeclaration.qualifiedName!!.asString()
+        val typeRef = declaration.type
+        val type = typeRef.resolve()
+        val typeDeclaration = type.declaration as KSClassDeclaration
+        val typeQualifiedName = typeDeclaration.qualifiedName!!.asString()
 
         return codecInfo?.codecCalling
-            ?.replace("~", rqName)
+            ?.replace("~", typeQualifiedName)
             ?.replace("^", codecDefaultName)
-            ?.let(CodeBlock::of) ?: feedback(rType)
+            ?.let(CodeBlock::of)
+            ?: inferCodecCalling(type)
+            ?: feedback(type)
     }
 
     fun getName(
@@ -36,10 +39,10 @@ internal object PropertyInfo {
         return codecInfo?.name?.replace("~", pName) ?: pName
     }
 
-    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) = builtinModifiers.mapNotNull{
-        (annotationClass, factory) ->
-        annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
-            factory(annotation)
+    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) =
+        builtinModifiers.mapNotNull { (annotationClass, factory) ->
+            annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
+                factory(annotation)
+            }
         }
-    }
 }

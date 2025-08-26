@@ -13,6 +13,7 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
+import kotlin.reflect.KClass
 
 internal val EmptyList = emptyList<Nothing>()
 
@@ -78,5 +79,17 @@ internal fun KSFunctionDeclaration.toMemberName(): MemberName {
     return if (isTopLevel) MemberName(packageName.asString(), simpleName.asString())
     else MemberName(parent.toClassName(), simpleName.asString())
 }
+
+internal inline fun <reified T : Annotation> KSAnnotated.hasAnnotation() =
+    hasAnnotation(T::class)
+
+internal fun <T : Annotation> KSAnnotated.hasAnnotation(annotationKClass: KClass<T>) =
+    findAnnotation(annotationKClass) != null
+
+internal inline fun <reified T : Annotation> KSAnnotated.findAnnotation() =
+    findAnnotation(T::class)
+
+internal fun <T : Annotation> KSAnnotated.findAnnotation(annotationKClass: KClass<T>) =
+    getAnnotationsByType(annotationKClass).firstOrNull()
 
 internal fun TypeName.erased() = transformIf({ it is ParameterizedTypeName }) { (it as ParameterizedTypeName).rawType }

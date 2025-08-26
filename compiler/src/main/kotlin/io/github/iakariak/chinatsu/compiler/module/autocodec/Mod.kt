@@ -18,13 +18,13 @@ internal const val P_VALUE_NAME = "value"
 
 context(env: ProcessEnv)
 internal fun TypeMirrors.generateCodecs() = env.createFile {
-    val codecClass = env.resolver.getSymbolsWithAnnotation(annotation<AutoCodec>())
+    val codecClasses = env.resolver.getSymbolsWithAnnotation(annotation<AutoCodec>())
         .filterIsInstance<KSClassDeclaration>()
         .map { ByCodec(it, it.getAnnotationsByType(AutoCodec::class).first().name) }
-    val autoCodecClass = env.resolver.getSymbolsWithAnnotation(annotation<AutoStreamCodec>())
+    val autoCodecClasses = env.resolver.getSymbolsWithAnnotation(annotation<AutoStreamCodec>())
         .filterIsInstance<KSClassDeclaration>()
         .map { ByStreamCodec(it, it.getAnnotationsByType(AutoStreamCodec::class).first().name) }
-    (codecClass + autoCodecClass)
+    (codecClasses + autoCodecClasses)
         .groupBy { byCodec -> byCodec.declaration.containingFile }
         .filterKeys { it != null }
         .forEach { (file, byCodecs) -> generateForAnnotatedByCodec(file!!, byCodecs) }

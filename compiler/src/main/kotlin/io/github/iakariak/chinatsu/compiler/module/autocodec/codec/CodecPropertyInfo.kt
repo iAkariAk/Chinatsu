@@ -34,7 +34,14 @@ internal class CodecPropertyInfo(
     val resolvedType get() = declaration.type.resolve()
 
     val codeCalling = PropertyInfo.getCodecCalling(
-        codecInfo, declaration, source.defaultCodecName
+        codecInfo = codecInfo,
+        declaration = declaration,
+        inferCodecCalling = { type ->
+            type.declaration.findAnnotation<AutoCodec>()?.let { annotation ->
+                CodeBlock.of("%T.%N", type, annotation.name)
+            }
+        },
+        codecDefaultName = source.defaultCodecName
     ) {
         context(env) {
             it.correspondCodecCalling(declaration, declaration.type) {

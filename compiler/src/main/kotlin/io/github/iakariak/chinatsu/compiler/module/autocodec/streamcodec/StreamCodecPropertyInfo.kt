@@ -39,7 +39,14 @@ internal class StreamCodecPropertyInfo(
     val resolvedType get() = declaration.type.resolve()
 
     private val codeCalling = PropertyInfo.getCodecCalling(
-        codecInfo, declaration, source.defaultCodecName
+        codecInfo,
+        declaration,
+        inferCodecCalling = { type ->
+            type.declaration.findAnnotation<AutoStreamCodec>()?.let { annotation ->
+                CodeBlock.of("%T.%N", type, annotation.name)
+            }
+        },
+        codecDefaultName = source.defaultCodecName
     ) {
         context(env) {
             it.correspondStreamCodecCalling(declaration, declaration.type) {
@@ -99,7 +106,7 @@ internal fun KSType.correspondStreamCodecCalling(
     }
 
     val delegateByCodec = { annotated: KSAnnotated ->
-        if (annotated.getAnnotationsByType(DelegateCodec::class).toList().isNotEmpty()) {
+        if (annotated.hasAnnotation<DelegateCodec>()) {
             delegateByCodec()
         }
     }
