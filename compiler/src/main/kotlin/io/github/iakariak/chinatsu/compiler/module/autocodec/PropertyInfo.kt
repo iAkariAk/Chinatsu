@@ -2,7 +2,6 @@ package io.github.iakariak.chinatsu.compiler.module.autocodec
 
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.symbol.KSAnnotated
-import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.CodeBlock
@@ -20,11 +19,10 @@ internal object PropertyInfo {
     ): CodeBlock {
         val typeRef = declaration.type
         val type = typeRef.resolve()
-        val typeDeclaration = type.declaration as KSClassDeclaration
-        val typeQualifiedName = typeDeclaration.qualifiedName!!.asString()
+        val declQualifiedName = type.declaration.qualifiedName!!.asString()
 
         return codecInfo?.codecCalling
-            ?.replace("~", typeQualifiedName)
+            ?.replace("~", declQualifiedName)
             ?.replace("^", codecDefaultName)
             ?.let(CodeBlock::of)
             ?: inferCodecCalling(type)

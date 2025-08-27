@@ -113,6 +113,11 @@ internal fun KSType.correspondStreamCodecCalling(
     typeSource?.let(delegateByCodec)
     propertySource?.let(delegateByCodec)
 
+    (declaration as? KSTypeAlias)?.let { decl ->
+        val aliasRef = decl.type
+        return aliasRef.resolve().correspondStreamCodecCalling(propertySource, aliasRef, transform)
+    }
+
     val qname = declaration.qualifiedName!!.asString()
 
     run {

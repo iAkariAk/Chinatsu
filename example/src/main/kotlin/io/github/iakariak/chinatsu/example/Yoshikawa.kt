@@ -36,6 +36,8 @@ fun onChat2(message: String) {
     logger.info("[CHAT] [LISTEN]: $message")
 }
 
+typealias AgeInt = @WithinInt(1, 18) Int
+
 @AutoCodec
 @AutoStreamCodec
 @Serializable
@@ -43,7 +45,7 @@ data class YoConfig(
     @Comment("How to name you desu.")
     val name: String = "Akari",
     @Comment("Less than 18 will be banned.")
-    val age: Int? = 13,
+    val age: AgeInt? = 13,
     @WithinLong(1, Long.MAX_VALUE)
     val def: Long? = null,
     @DelegateCodec

@@ -1,9 +1,6 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
-import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.KSTypeReference
+import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.buildCodeBlock
@@ -85,6 +82,11 @@ internal fun KSType.correspondCodecCalling(
     typeSource: KSTypeReference? = null,
     transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
+    (declaration as? KSTypeAlias)?.let { decl ->
+        val aliasRef = decl.type
+        return aliasRef.resolve().correspondCodecCalling(propertySource, aliasRef, transform)
+    }
+
     val qname = declaration.qualifiedName!!.asString()
 
     run {
