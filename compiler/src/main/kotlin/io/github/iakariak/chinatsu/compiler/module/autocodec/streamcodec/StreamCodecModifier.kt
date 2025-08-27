@@ -1,17 +1,10 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
 import com.squareup.kotlinpoet.CodeBlock
-import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.CodecPropertyInfo
+import io.github.iakariak.chinatsu.compiler.module.autocodec.CodecCalling
 
 internal interface StreamCodecModifier {
-    context(info: CodecPropertyInfo)
-    fun transformCodecType(type: CodeBlock): CodeBlock = type
-
-    // The reason why info can be null:
-    // Principally transformation (esp. expend) codec-calling not depend on info.
-    // Since most fundamental codec-calling is already constructed in PropertyInfo using info.
-    context(info: StreamCodecPropertyInfo?)
-    fun transformCodecCalling(codecCalling: CodeBlock): CodeBlock = codecCalling
+    fun transformCodecCalling(codecCalling: CodecCalling): CodecCalling = codecCalling
 
     /**
      * Transform the arg from `encode`
@@ -20,19 +13,27 @@ internal interface StreamCodecModifier {
     fun transformArg(arg: CodeBlock): CodeBlock = arg
 
     /**
+     * A functor provide an ability to be translated by other modifier
+     */
+    context(info: StreamCodecPropertyInfo)
+    fun transformSelfArg(arg: CodeBlock, transform: (CodeBlock) -> CodeBlock): CodeBlock = arg
+
+    /**
      * Transform the result from `decode`
      */
     context(info: StreamCodecPropertyInfo)
     fun transformResult(result: CodeBlock): CodeBlock = result
+
+    /**
+     * A functor provide an ability to be translated by other modifier
+     */
+    context(info: StreamCodecPropertyInfo)
+    fun transformSelfResult(result: CodeBlock, transform: (CodeBlock) -> CodeBlock): CodeBlock = result
+
 }
 
-internal fun List<StreamCodecModifier>.composed(): StreamCodecModifier = object : StreamCodecModifier {
-    context(info: CodecPropertyInfo)
-    override fun transformCodecType(type: CodeBlock) =
-        fold(type) { ace, e -> e.transformCodecType(ace) }
-
-    context(info: StreamCodecPropertyInfo?)
-    override fun transformCodecCalling(codecCalling: CodeBlock) =
+internal fun Iterable<StreamCodecModifier>.composed(): StreamCodecModifier = object : StreamCodecModifier {
+    override fun transformCodecCalling(codecCalling: CodecCalling) =
         fold(codecCalling) { ace, e -> e.transformCodecCalling(ace) }
 
     context(info: StreamCodecPropertyInfo)
@@ -40,6 +41,16 @@ internal fun List<StreamCodecModifier>.composed(): StreamCodecModifier = object 
         fold(arg) { ace, e -> e.transformArg(ace) }
 
     context(info: StreamCodecPropertyInfo)
+    override fun transformSelfArg(arg: CodeBlock, transform: (CodeBlock) -> CodeBlock) =
+        fold(arg) { ace, e -> e.transformSelfArg(ace, transform) }
+
+    context(info: StreamCodecPropertyInfo)
     override fun transformResult(result: CodeBlock) =
         fold(result) { ace, e -> e.transformResult(ace) }
+
+    context(info: StreamCodecPropertyInfo)
+    override fun transformSelfResult(result: CodeBlock, transform: (CodeBlock) -> CodeBlock) =
+        fold(result) { ace, e -> e.transformSelfResult(ace, transform) }
+
 }
+

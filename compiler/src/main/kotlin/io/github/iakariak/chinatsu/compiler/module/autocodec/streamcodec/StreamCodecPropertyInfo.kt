@@ -1,21 +1,20 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
-import com.google.devtools.ksp.symbol.*
-import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.KModifier
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.symbol.Nullability
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.AutoStreamCodec
 import io.github.iakariak.chinatsu.annotation.CodecInfo
 import io.github.iakariak.chinatsu.annotation.DelegateCodec
 import io.github.iakariak.chinatsu.compiler.*
-import io.github.iakariak.chinatsu.compiler.module.autocodec.P_BUF_NAME
-import io.github.iakariak.chinatsu.compiler.module.autocodec.P_VALUE_NAME
-import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
+import io.github.iakariak.chinatsu.compiler.module.autocodec.*
+import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.CodecPropertyInfo
 import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.correspondCodecCalling
+import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.scanModifiers
 import java.util.*
 
 internal class StreamCodecPropertyInfo(
@@ -32,15 +31,16 @@ internal class StreamCodecPropertyInfo(
 
     }
 
-    val modifier = PropertyInfo.scanModifiers(declaration, streamCodecBuiltinModifiers).composed()
+    private val modifierMarked = StreamCodecPropertyInfo.scanModifiers(declaration)
     val codecInfo = declaration.findAnnotation<CodecInfo>()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val resolvedType get() = declaration.type.resolve()
 
-    private val codeCalling = PropertyInfo.getCodecCalling(
+    val codeCalling = PropertyInfo.getCodecCalling(
         codecInfo,
         declaration,
-        inferCodecCalling = { type ->
+        inferType = { it.toTypeName() },
+        inferTerm = { type ->
             type.declaration.findAnnotation<AutoStreamCodec>()?.let { annotation ->
                 CodeBlock.of("%T.%N", type, annotation.name)
             }
@@ -48,89 +48,103 @@ internal class StreamCodecPropertyInfo(
         codecDefaultName = source.defaultCodecName
     ) { type ->
         context(env) {
-            type.correspondStreamCodecCalling(declaration, declaration.type) { it ->
-                modifier.transformCodecCalling(it)
-            }
+            modifierMarked.correspondStreamCodecCalling()
         }
     }
 
     private val codeCallingVarName = "c_$name"
 
     fun codecCallingDefineBlock() =
-        PropertySpec.builder(codeCallingVarName, source.typeOf(resolvedType.toTypeName()), KModifier.PRIVATE)
-            .initializer(codeCalling)
+        PropertySpec.builder(codeCallingVarName, source.typeOf(codeCalling.type), KModifier.PRIVATE)
+            .initializer(codeCalling.term)
             .build()
 
     fun encodeBlock(): CodeBlock = context(this) {
         val type = resolvedType
         val arg = CodeBlock.of("%N.%N", P_VALUE_NAME, name)
-        val transformedArg = modifier.transformArg(arg)
-        val nullableArg = transformedArg.transformIf({ type.isMarkedNullable }) {
-            CodeBlock.of(
-                "%T.ofNullable(%N.%N)",
-                Optional::class.asClassName().parameterizedBy(type.makeNotNullable().toClassName()),
-                P_VALUE_NAME,
-                name
-            )
+        val transformedArg = modifierMarked.foldIn(arg) { ace, marked ->
+            when (marked) {
+                is ModifierMarked.Type -> {
+                    ace.transformIf({ marked.resolvedType.nullability == Nullability.NULLABLE }) {
+                        CodeBlock.of(
+                            "%T.ofNullable(%N.%N)",
+                            Optional::class.asClassName().parameterizedBy(type.makeNotNullable().toClassName()),
+                            P_VALUE_NAME,
+                            name
+                        )
+                    }
+                }
+
+                is ModifierMarked.Wrapper -> marked.modifier.transformResult(ace)
+            }
         }
 
         return CodeBlock.of(
             "%N.encode(%N, %L)",
             codeCallingVarName,
             P_BUF_NAME,
-            nullableArg
+            transformedArg
         )
     }
 
 
     fun decodeBlock(): CodeBlock {
         val result = CodeBlock.of(
-            "%N.decode(%N)".transformIf({ resolvedType.isMarkedNullable }) { "$it.orElse(null)" },
+            "%N.decode(%N)",
             codeCallingVarName,
             P_BUF_NAME
         )
-        return modifier.transformResult(result)
+        return modifierMarked.foldIn(result) { ace, marked ->
+            when (marked) {
+                is ModifierMarked.Type -> {
+                    ace.transformIf({ marked.resolvedType.nullability == Nullability.NULLABLE }) {
+                        CodeBlock.of("%L.orElse(null)", it)
+                    }
+                }
+
+                is ModifierMarked.Wrapper -> marked.modifier.transformResult(ace)
+            }
+        }
     }
 }
 
 context(env: ProcessEnv)
-internal fun KSType.correspondStreamCodecCalling(
-    propertySource: KSPropertyDeclaration? = null,
-    typeSource: KSTypeReference? = null,
-    transform: (CodeBlock) -> CodeBlock = { it }
-): CodeBlock {
-    fun delegateByCodec(): CodeBlock {
-        val codec = correspondCodecCalling(propertySource, typeSource)
-        return CodeBlock.of("%T.fromCodec(%L)", TypeMirrors.ByteBufCodecs, codec)
+internal fun ModifierMarked<StreamCodecModifier>.correspondStreamCodecCalling(): CodecCalling {
+    if (this is ModifierMarked.Wrapper) {
+        return inner.correspondStreamCodecCalling()
     }
+    this as ModifierMarked.Type
 
-    val delegateByCodec = { annotated: KSAnnotated ->
-        if (annotated.hasAnnotation<DelegateCodec>()) {
-            delegateByCodec()
+    fun delegateByCodec(): CodecCalling {
+        val marked = CodecPropertyInfo.scanModifiers(source)
+        val codec = marked.correspondCodecCalling()
+        return codec.map { type, term ->
+            type to CodeBlock.of("%T.fromCodec(%L)", TypeMirrors.ByteBufCodecs, term)
         }
     }
 
-    typeSource?.let(delegateByCodec)
-    propertySource?.let(delegateByCodec)
+    if (source.hasAnnotation<DelegateCodec>()) {
+        delegateByCodec()
+    }
 
     run {
         val dataType = when {
-            isOptional -> arguments.first().type!!.resolve()
-            isMarkedNullable -> makeNotNullable()
+            resolvedType.isOptional -> arguments.first()
+            resolvedType.isMarkedNullable -> copy(resolvedType = resolvedType.makeNotNullable())
             else -> return@run
         }
-        return CodeBlock.of(
-            "%T.optional(%L)",
-            TypeMirrors.ByteBufCodecs,
-            dataType.correspondStreamCodecCalling(propertySource, typeSource, transform)
+        val codecCalling = dataType.correspondStreamCodecCalling()
+        return CodecCalling(
+            type = Optional::class.asTypeName().parameterizedBy(codecCalling.type),
+            term = CodeBlock.of(
+                "%T.optional(%L)",
+                TypeMirrors.ByteBufCodecs,
+                codecCalling.term
+            )
         )
     }
 
-    (declaration as? KSTypeAlias)?.let { decl ->
-        val aliasRef = decl.type
-        return aliasRef.resolve().correspondStreamCodecCalling(propertySource, aliasRef, transform)
-    }
-
+    val declaration = resolvedType.declaration
     val qname = declaration.qualifiedName!!.asString()
 
     val isDPPair = qname == TypeMirrors.DFPair.canonicalName
@@ -140,20 +154,26 @@ internal fun KSType.correspondStreamCodecCalling(
         return delegateByCodec()
     }
 
-    if (isList) {
-        val tRef = arguments.first().type!!
-        return CodeBlock.of(
-            "%T.list().apply(%L)",
-            TypeMirrors.ByteBufCodecs,
-            tRef.resolve().correspondStreamCodecCalling(null, tRef, transform)
+    if (resolvedType.isList) {
+        val markedT = arguments.first()
+        val codecCalling = markedT.correspondStreamCodecCalling()
+        return CodecCalling(
+            type = List::class.asTypeName().parameterizedBy(codecCalling.type),
+            term = CodeBlock.of(
+                "%T.list<%T, %T>().apply(%L)",
+                TypeMirrors.ByteBufCodecs,
+                TypeMirrors.ByteBuf,
+                codecCalling.type,
+                codecCalling.term
+            )
         )
     }
 
-    if (isMap) {
+    if (resolvedType.isMap) {
         return delegateByCodec()
     }
 
-    val codecCalling = run {
+    val guessedTerm = run {
         val field = when (qname) {
             qualificationOf<Boolean>() -> "BOOL"
             qualificationOf<Byte>() -> "BYTE"
@@ -174,11 +194,10 @@ internal fun KSType.correspondStreamCodecCalling(
         } ?: return@run CodeBlock.of("%L.%L", qname, AutoStreamCodec.DEFAULT_NAME)
         CodeBlock.of("%T.%L", TypeMirrors.ByteBufCodecs, field)
     }
-    return transform(codecCalling.transformIf({ typeSource != null }) {
-        val modifier = PropertyInfo.scanModifiers(typeSource!!, streamCodecBuiltinModifiers).composed()
-        context(null) {
-            modifier.transformCodecCalling(it)
-        }
-    })
+    val codecCalling = CodecCalling(
+        type = resolvedType.toTypeName(), // Most fundamental origin
+        term = guessedTerm
+    )
+    return modifier.transformCodecCalling(codecCalling)
 }
 

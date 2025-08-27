@@ -1,5 +1,6 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
+import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -8,6 +9,7 @@ import io.github.iakariak.chinatsu.annotation.*
 import io.github.iakariak.chinatsu.compiler.ProcessEnv
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
 import io.github.iakariak.chinatsu.compiler.module.autocodec.AnnotatedByCodec
+import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
 import kotlin.reflect.KClass
 
 internal val codecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annotation) -> CodecModifier>(
@@ -16,6 +18,11 @@ internal val codecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annotation) 
     WithinFloat::class to { within -> WithinFloatModifier(within as WithinFloat) },
     WithinDouble::class to { within -> WithinDoubleModifier(within as WithinDouble) }
 )
+
+internal fun CodecPropertyInfo.Companion.scanModifiers(
+    annotated: KSAnnotated,
+) = PropertyInfo.scanModifiers(annotated, codecBuiltinModifiers, Iterable<CodecModifier>::composed)
+
 
 internal data class ByCodec(
     override val declaration: KSClassDeclaration,

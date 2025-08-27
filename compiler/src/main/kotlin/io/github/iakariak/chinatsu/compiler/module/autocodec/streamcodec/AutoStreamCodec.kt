@@ -1,5 +1,6 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
+import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -10,6 +11,7 @@ import io.github.iakariak.chinatsu.compiler.TypeMirrors
 import io.github.iakariak.chinatsu.compiler.module.autocodec.AnnotatedByCodec
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_BUF_NAME
 import io.github.iakariak.chinatsu.compiler.module.autocodec.P_VALUE_NAME
+import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
 import io.github.iakariak.chinatsu.compiler.transformIf
 import java.util.*
 import kotlin.reflect.KClass
@@ -20,6 +22,11 @@ internal val streamCodecBuiltinModifiers = mapOf<KClass<out Annotation>, (Annota
     WithinFloat::class to { within -> WithinFloatModifier(within as WithinFloat) },
     WithinDouble::class to { within -> WithinDoubleModifier(within as WithinDouble) }
 )
+
+internal fun StreamCodecPropertyInfo.Companion.scanModifiers(
+    annotated: KSAnnotated,
+) = PropertyInfo.scanModifiers(annotated, streamCodecBuiltinModifiers, Iterable<StreamCodecModifier>::composed)
+
 
 internal data class ByStreamCodec(override val declaration: KSClassDeclaration, override val name: String) :
     AnnotatedByCodec {

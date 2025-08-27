@@ -1,10 +1,9 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec
 
 import com.google.devtools.ksp.getAnnotationsByType
-import com.google.devtools.ksp.symbol.KSAnnotated
-import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.TypeName
 import io.github.iakariak.chinatsu.annotation.CodecInfo
 import kotlin.reflect.KClass
 
@@ -13,20 +12,24 @@ internal object PropertyInfo {
     fun getCodecCalling(
         codecInfo: CodecInfo?,
         declaration: KSPropertyDeclaration,
-        inferCodecCalling: (KSType) -> CodeBlock?,
+        inferType: (KSType) -> TypeName,
+        inferTerm: (KSType) -> CodeBlock?,
         codecDefaultName: String,
-        feedback: (propertyType: KSType) -> CodeBlock,
-    ): CodeBlock {
+        feedback: (propertyType: KSType) -> CodecCalling,
+    ): CodecCalling {
         val typeRef = declaration.type
         val type = typeRef.resolve()
         val declQualifiedName = type.declaration.qualifiedName!!.asString()
 
-        return codecInfo?.codecCalling
-            ?.replace("~", declQualifiedName)
-            ?.replace("^", codecDefaultName)
-            ?.let(CodeBlock::of)
-            ?: inferCodecCalling(type)
-            ?: feedback(type)
+        return CodecCalling(
+            type = inferType(type),
+            term = codecInfo?.codecCalling
+                ?.replace("~", declQualifiedName)
+                ?.replace("^", codecDefaultName)
+                ?.let(CodeBlock::of)
+                ?: inferTerm(type)
+                ?: return feedback(type)
+        )
     }
 
     fun getName(
@@ -37,10 +40,118 @@ internal object PropertyInfo {
         return codecInfo?.name?.replace("~", pName) ?: pName
     }
 
-    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) =
-        builtinModifiers.mapNotNull { (annotationClass, factory) ->
+//    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) =
+//        builtinModifiers.mapNotNull { (annotationClass, factory) ->
+//            annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
+//                factory(annotation)
+//            }
+//        }
+
+
+    fun <T> scanModifiers(
+        annotated: KSAnnotated,
+        builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>,
+        compose: Iterable<T>.() -> T,
+        nullable: Nullability = Nullability.PLATFORM
+    ): ModifierMarked<T> {
+        val modifier = builtinModifiers.mapNotNull { (annotationClass, factory) ->
             annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
                 factory(annotation)
             }
+        }.compose() // self
+
+        return when (annotated) {
+            is KSPropertyDeclaration -> {
+                val typeRef = annotated.type
+                ModifierMarked.Wrapper(
+                    source = annotated,
+                    modifier = modifier,
+                    inner = scanModifiers(typeRef, builtinModifiers, compose, typeRef.resolve().nullability),
+                )
+            }
+
+            is KSTypeAlias -> {
+                val typeRef = annotated.type
+                ModifierMarked.Wrapper(
+                    source = annotated,
+                    modifier = modifier,
+                    inner = scanModifiers(
+                        typeRef,
+                        builtinModifiers,
+                        compose,
+                        annotated.type.resolve().nullability
+                    )
+                )
+            }
+
+            is KSTypeArgument -> {
+                val typeRef = annotated.type
+                ModifierMarked.Wrapper(
+                    source = annotated,
+                    modifier = modifier,
+                    inner = scanModifiers(typeRef!!, builtinModifiers, compose, typeRef.resolve().nullability)
+                )
+            }
+
+            is KSTypeReference -> {
+                val typeRef = annotated
+                val resolvedType = when (nullable) {
+                    Nullability.NULLABLE -> typeRef.resolve().makeNullable()
+                    Nullability.NOT_NULL -> typeRef.resolve().makeNotNullable()
+                    Nullability.PLATFORM -> typeRef.resolve()
+                } // Keep nullability when unwrapping
+                (resolvedType.declaration as? KSTypeAlias)?.let { decl ->
+                    return scanModifiers(decl, builtinModifiers, compose, resolvedType.nullability)
+                }
+                ModifierMarked.Type(
+                    source = typeRef,
+                    modifier = modifier,
+                    resolvedType = resolvedType,
+                    arguments = resolvedType.arguments.map { argument ->
+                        scanModifiers(argument, builtinModifiers, compose)
+                    }
+                )
+            }
+
+            else -> error("Unsupported $annotated")
         }
+    }
+}
+
+internal sealed interface ModifierMarked<T> {
+    val source: KSAnnotated
+    val modifier: T
+
+    fun <R> foldIn(initial: R, operation: (R, ModifierMarked<T>) -> R): R
+
+    data class Wrapper<T>(
+        override val source: KSAnnotated,
+        override val modifier: T,
+        val inner: ModifierMarked<T>
+    ) : ModifierMarked<T> {
+        override fun <R> foldIn(initial: R, operation: (R, ModifierMarked<T>) -> R) =
+            operation(inner.foldIn(initial, operation), this)
+    }
+
+    data class Type<T>(
+        override val source: KSTypeReference,
+        override val modifier: T,
+        val resolvedType: KSType,
+        val arguments: List<ModifierMarked<T>>,
+    ) : ModifierMarked<T> {
+        override fun <R> foldIn(initial: R, operation: (R, ModifierMarked<T>) -> R): R =
+            operation(initial, this)
+    }
+}
+
+internal data class CodecCalling(
+    val type: TypeName, // exclusive Codec or StreamCodec wrapper
+    val term: CodeBlock
+) {
+    fun typeBlock() = CodeBlock.of("%T", type)
+
+    inline fun map(transform: (type: TypeName, term: CodeBlock) -> Pair<TypeName, CodeBlock>): CodecCalling {
+        val (type, term) = transform(type, term)
+        return CodecCalling(type, term)
+    }
 }

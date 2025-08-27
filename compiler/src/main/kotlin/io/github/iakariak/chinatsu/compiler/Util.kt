@@ -95,4 +95,5 @@ internal inline fun <reified T : Annotation> KSAnnotated.findAnnotation() =
 internal fun <T : Annotation> KSAnnotated.findAnnotation(annotationKClass: KClass<T>) =
     getAnnotationsByType(annotationKClass).firstOrNull()
 
-internal fun TypeName.erased() = transformIf({ it is ParameterizedTypeName }) { (it as ParameterizedTypeName).rawType }
+internal fun TypeName.erased() = (this as? ParameterizedTypeName)?.rawType ?: this
+internal fun TypeName.erasedAsClass() = (this as? ParameterizedTypeName)?.rawType

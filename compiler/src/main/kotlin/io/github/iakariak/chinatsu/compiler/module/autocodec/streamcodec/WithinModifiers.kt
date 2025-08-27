@@ -10,6 +10,7 @@ import io.github.iakariak.chinatsu.annotation.WithinFloat
 import io.github.iakariak.chinatsu.annotation.WithinInt
 import io.github.iakariak.chinatsu.annotation.WithinLong
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
+import io.github.iakariak.chinatsu.compiler.module.autocodec.CodecCalling
 
 
 private val withIn = StreamCodecAttachment.install(run {
@@ -47,14 +48,15 @@ private val withIn = StreamCodecAttachment.install(run {
 
 private class WithinNumberModifier<N : Number>(val startInclusive: N, val endInclusive: N) :
     StreamCodecModifier {
-    context(info: StreamCodecPropertyInfo?)
-    override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-        "%L.%M(%L, %L)",
-        codecCalling,
-        withIn,
-        startInclusive,
-        endInclusive,
-    )
+    override fun transformCodecCalling(codecCalling: CodecCalling) = codecCalling.map { type, term ->
+        type to CodeBlock.of(
+            "%L.%M(%L, %L)",
+            term,
+            withIn,
+            startInclusive,
+            endInclusive,
+        )
+    }
 }
 
 internal class WithinIntModifier(range: WithinInt) :

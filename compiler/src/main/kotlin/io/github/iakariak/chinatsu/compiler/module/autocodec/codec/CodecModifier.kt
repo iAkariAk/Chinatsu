@@ -1,16 +1,10 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
 import com.squareup.kotlinpoet.CodeBlock
+import io.github.iakariak.chinatsu.compiler.module.autocodec.CodecCalling
 
 internal interface CodecModifier {
-    context(info: CodecPropertyInfo)
-    fun transformCodecType(type: CodeBlock): CodeBlock = type
-
-    // The reason why info can be null:
-    // Principally transformation (esp. expend) codec-calling not depend on info.
-    // Since most fundamental codec-calling is already constructed in PropertyInfo using info.
-    context(info: CodecPropertyInfo?)
-    fun transformCodecCalling(codecCalling: CodeBlock): CodeBlock = codecCalling
+    fun transformCodecCalling(codecCalling: CodecCalling): CodecCalling = codecCalling
 
     /**
      * Transform the arg from `forGetting` that is equivalent to encode
@@ -26,13 +20,8 @@ internal interface CodecModifier {
 }
 
 
-internal fun List<CodecModifier>.composed(): CodecModifier = object : CodecModifier {
-    context(info: CodecPropertyInfo)
-    override fun transformCodecType(type: CodeBlock) =
-        fold(type) { ace, e -> e.transformCodecCalling(ace) }
-
-    context(info: CodecPropertyInfo?)
-    override fun transformCodecCalling(codecCalling: CodeBlock) =
+internal fun Iterable<CodecModifier>.composed(): CodecModifier = object : CodecModifier {
+    override fun transformCodecCalling(codecCalling: CodecCalling) =
         fold(codecCalling) { ace, e -> e.transformCodecCalling(ace) }
 
     context(info: CodecPropertyInfo)
