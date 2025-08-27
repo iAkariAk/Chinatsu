@@ -16,7 +16,8 @@ dependencyResolutionManagement {
     }
 }
 
-
+includeBuild("build-logic")
 include(":annotation")
-include(":core")
 include(":compiler")
+include(":core")
+include(":example")

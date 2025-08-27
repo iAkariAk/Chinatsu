@@ -1,11 +1,11 @@
 [versions]
-loom = "1.11.4"
+loom = "1.11.7"
 kotlin = "2.2.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization-json = "1.8.1"
 ksp = "2.2.0-2.0.2"
 kotlinpoet = "2.2.0"
-shadow = "9.0.0-rc1"
+shadow = "9.0.2"
 jetbrains-annotaions = "26.0.2"
 maven-publishing = "0.31.0"
 
@@ -16,6 +16,10 @@ ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.re
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 kotlinpoet-kotlin-metadata = { module = "com.squareup:kotlinpoet-kotlin-metadata", version.ref = "kotlinpoet" }
 jetbrains-annotaions = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotaions" }
+
+loom-plugin = { module = "fabric-loom:fabric-loom.gradle.plugin", version.ref = "loom" }
+shadow-plugin = { module = "com.gradleup.shadow:shadow-gradle-plugin", version.ref = "shadow" }
+
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

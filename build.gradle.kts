@@ -1,5 +1,7 @@
+
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
@@ -17,17 +19,27 @@ allprojects {
     group = project.property("maven_group") as String
 }
 
+val targetJavaVersion = 21
+
 subprojects {
     plugins.withId("java") {
         configure<JavaPluginExtension> {
-            toolchain.languageVersion = JavaLanguageVersion.of(21)
+            toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 
             withSourcesJar()
+        }
+
+
+        tasks.withType<JavaCompile>().configureEach {
+            options.encoding = "UTF-8"
+            options.release.set(targetJavaVersion)
         }
     }
     plugins.withId("org.jetbrains.kotlin.jvm") {
         configure<KotlinJvmProjectExtension> {
             compilerOptions {
+                jvmTarget.set(JvmTarget.fromTarget(targetJavaVersion.toString()))
+
                 // Refer to https://kotlinlang.org/docs/whatsnew22.html
                 freeCompilerArgs = listOf(
                     "-Xcontext-parameters",

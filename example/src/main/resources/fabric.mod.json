@@ -11,11 +11,11 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "io.github.iakariak.chinatsu.Chinatsu"
+      "io.github.iakariak.chinatsu.example.Yoshikawa_ChinatsuApp"
     ]
   },
   "mixins": [
-    "chinatsu.mixins.json"
+    "yoshikawa.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",
