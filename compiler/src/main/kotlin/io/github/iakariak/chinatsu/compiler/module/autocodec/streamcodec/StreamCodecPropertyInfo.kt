@@ -46,9 +46,9 @@ internal class StreamCodecPropertyInfo(
             }
         },
         codecDefaultName = source.defaultCodecName
-    ) {
+    ) { type ->
         context(env) {
-            it.correspondStreamCodecCalling(declaration, declaration.type) {
+            type.correspondStreamCodecCalling(declaration, declaration.type) { it ->
                 modifier.transformCodecCalling(it)
             }
         }
@@ -113,13 +113,6 @@ internal fun KSType.correspondStreamCodecCalling(
     typeSource?.let(delegateByCodec)
     propertySource?.let(delegateByCodec)
 
-    (declaration as? KSTypeAlias)?.let { decl ->
-        val aliasRef = decl.type
-        return aliasRef.resolve().correspondStreamCodecCalling(propertySource, aliasRef, transform)
-    }
-
-    val qname = declaration.qualifiedName!!.asString()
-
     run {
         val dataType = when {
             isOptional -> arguments.first().type!!.resolve()
@@ -132,6 +125,13 @@ internal fun KSType.correspondStreamCodecCalling(
             dataType.correspondStreamCodecCalling(propertySource, typeSource, transform)
         )
     }
+
+    (declaration as? KSTypeAlias)?.let { decl ->
+        val aliasRef = decl.type
+        return aliasRef.resolve().correspondStreamCodecCalling(propertySource, aliasRef, transform)
+    }
+
+    val qname = declaration.qualifiedName!!.asString()
 
     val isDPPair = qname == TypeMirrors.DFPair.canonicalName
     val isKPair = qname == Pair::class.qualifiedName

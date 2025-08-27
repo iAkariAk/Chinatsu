@@ -82,13 +82,6 @@ internal fun KSType.correspondCodecCalling(
     typeSource: KSTypeReference? = null,
     transform: (CodeBlock) -> CodeBlock = { it }
 ): CodeBlock {
-    (declaration as? KSTypeAlias)?.let { decl ->
-        val aliasRef = decl.type
-        return aliasRef.resolve().correspondCodecCalling(propertySource, aliasRef, transform)
-    }
-
-    val qname = declaration.qualifiedName!!.asString()
-
     run {
         val dataType = when {
             isOptional -> arguments.first().type!!.resolve()
@@ -97,6 +90,13 @@ internal fun KSType.correspondCodecCalling(
         }
         return dataType.correspondCodecCalling(propertySource, typeSource, transform)
     }
+
+    (declaration as? KSTypeAlias)?.let { decl ->
+        val aliasRef = decl.type
+        return aliasRef.resolve().correspondCodecCalling(propertySource, aliasRef, transform)
+    }
+
+    val qname = declaration.qualifiedName!!.asString()
 
     val isDPPair = qname == TypeMirrors.DFPair.canonicalName
     val isKPair = qname == Pair::class.qualifiedName

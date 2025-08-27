@@ -37,9 +37,6 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
         val tType = declaration.toClassName()
         val type = typeOf(tType)
         val infos = StreamCodecPropertyInfo.fromClass(declaration, this).toList()
-        val mergedDependencies = infos.mapNotNull { it.modifier.dependencies }.merged()
-        val attachedFunctions = mergedDependencies.attachedFunctions
-        val attachedProperties = mergedDependencies.attachedProperties
         val codecCallingDefs = infos.map(StreamCodecPropertyInfo::codecCallingDefineBlock)
         val decode = FunSpec.builder("decode")
             .addModifiers(KModifier.OVERRIDE)
@@ -74,11 +71,10 @@ internal data class ByStreamCodec(override val declaration: KSClassDeclaration, 
         val initializer = TypeSpec.anonymousClassBuilder()
             .addSuperinterface(type)
             .addProperties(codecCallingDefs)
-            .addProperties(attachedProperties)
-            .addFunctions(attachedFunctions)
             .addFunction(decode)
             .addFunction(encode)
             .build()
+        StreamCodecAttachment.attach()
         return type to initializer
     }
 }

@@ -1,7 +1,10 @@
 package io.github.iakariak.chinatsu.compiler.module.autocodec.streamcodec
 
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeVariableName
+import com.squareup.kotlinpoet.asClassName
 import io.github.iakariak.chinatsu.annotation.WithinDouble
 import io.github.iakariak.chinatsu.annotation.WithinFloat
 import io.github.iakariak.chinatsu.annotation.WithinInt
@@ -9,7 +12,7 @@ import io.github.iakariak.chinatsu.annotation.WithinLong
 import io.github.iakariak.chinatsu.compiler.TypeMirrors
 
 
-private val attachedWithin = run {
+private val withIn = StreamCodecAttachment.install(run {
     val b = TypeVariableName("B")
     var v = TypeVariableName("V")
     v = v.copy(
@@ -20,7 +23,6 @@ private val attachedWithin = run {
     )
     var targetType = TypeMirrors.StreamCodec.parameterizedBy(b, v)
     FunSpec.builder("within")
-        .addModifiers(KModifier.PRIVATE)
         .addTypeVariable(b)
         .addTypeVariable(v)
         .receiver(targetType)
@@ -40,21 +42,16 @@ private val attachedWithin = run {
         )
         .addStatement("return this.map(checker, checker)")
         .build()
-}
+}, isExtension = true)
 
-private val WithinDependencies = StreamCodecModifierDependencies(
-    attachedFunctions = setOf(attachedWithin)
-)
 
 private class WithinNumberModifier<N : Number>(val startInclusive: N, val endInclusive: N) :
     StreamCodecModifier {
-    override val dependencies get() = WithinDependencies
-
     context(info: StreamCodecPropertyInfo?)
     override fun transformCodecCalling(codecCalling: CodeBlock) = CodeBlock.of(
-        "%L.%N(%L, %L)",
+        "%L.%M(%L, %L)",
         codecCalling,
-        attachedWithin.name,
+        withIn,
         startInclusive,
         endInclusive,
     )
