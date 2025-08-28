@@ -40,19 +40,11 @@ internal object PropertyInfo {
         return codecInfo?.name?.replace("~", pName) ?: pName
     }
 
-//    fun <T> scanModifiers(annotated: KSAnnotated, builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>) =
-//        builtinModifiers.mapNotNull { (annotationClass, factory) ->
-//            annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
-//                factory(annotation)
-//            }
-//        }
-
-
     fun <T> scanModifiers(
         annotated: KSAnnotated,
         builtinModifiers: Map<KClass<out Annotation>, (Annotation) -> T>,
         compose: Iterable<T>.() -> T,
-        nullable: Nullability = Nullability.PLATFORM
+        nullability: Nullability = Nullability.PLATFORM
     ): ModifierMarked<T> {
         val modifier = builtinModifiers.mapNotNull { (annotationClass, factory) ->
             annotated.getAnnotationsByType(annotationClass).firstOrNull()?.let { annotation ->
@@ -66,7 +58,12 @@ internal object PropertyInfo {
                 ModifierMarked.Wrapper(
                     source = annotated,
                     modifier = modifier,
-                    inner = scanModifiers(typeRef, builtinModifiers, compose, typeRef.resolve().nullability),
+                    inner = scanModifiers(
+                        annotated = typeRef,
+                        builtinModifiers = builtinModifiers,
+                        compose = compose,
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: typeRef.resolve().nullability
+                    ),
                 )
             }
 
@@ -76,10 +73,10 @@ internal object PropertyInfo {
                     source = annotated,
                     modifier = modifier,
                     inner = scanModifiers(
-                        typeRef,
-                        builtinModifiers,
-                        compose,
-                        annotated.type.resolve().nullability
+                        annotated = typeRef,
+                        builtinModifiers = builtinModifiers,
+                        compose = compose,
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: annotated.type.resolve().nullability
                     )
                 )
             }
@@ -89,13 +86,16 @@ internal object PropertyInfo {
                 ModifierMarked.Wrapper(
                     source = annotated,
                     modifier = modifier,
-                    inner = scanModifiers(typeRef!!, builtinModifiers, compose, typeRef.resolve().nullability)
+                    inner = scanModifiers(
+                        annotated = typeRef!!, builtinModifiers = builtinModifiers, compose = compose,
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: typeRef.resolve().nullability
+                    )
                 )
             }
 
             is KSTypeReference -> {
                 val typeRef = annotated
-                val resolvedType = when (nullable) {
+                val resolvedType = when (nullability) {
                     Nullability.NULLABLE -> typeRef.resolve().makeNullable()
                     Nullability.NOT_NULL -> typeRef.resolve().makeNotNullable()
                     Nullability.PLATFORM -> typeRef.resolve()
