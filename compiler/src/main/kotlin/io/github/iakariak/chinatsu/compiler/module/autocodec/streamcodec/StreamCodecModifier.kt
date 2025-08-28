@@ -30,6 +30,7 @@ internal interface StreamCodecModifier {
     context(info: StreamCodecPropertyInfo)
     fun transformSelfResult(result: CodeBlock, transform: (CodeBlock) -> CodeBlock): CodeBlock = result
 
+    companion object Empty : StreamCodecModifier
 }
 
 internal fun Iterable<StreamCodecModifier>.composed(): StreamCodecModifier = object : StreamCodecModifier {

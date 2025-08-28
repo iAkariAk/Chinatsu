@@ -13,7 +13,7 @@ import io.github.iakariak.chinatsu.annotation.DelegateCodec
 import io.github.iakariak.chinatsu.compiler.*
 import io.github.iakariak.chinatsu.compiler.module.autocodec.*
 import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.CodecPropertyInfo
-import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.correspondCodecCalling
+import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.correspond
 import io.github.iakariak.chinatsu.compiler.module.autocodec.codec.scanModifiers
 import java.util.*
 
@@ -31,14 +31,16 @@ internal class StreamCodecPropertyInfo(
 
     }
 
-    private val modifierMarked = StreamCodecPropertyInfo.scanModifiers(declaration)
     val codecInfo = declaration.findAnnotation<CodecInfo>()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val resolvedType get() = declaration.type.resolve()
 
-    val codeCalling = PropertyInfo.getCodecCalling(
+    private val modifierMarked = StreamCodecPropertyInfo.scanModifiers(declaration)
+
+    private val correspondedModifierMarked = PropertyInfo.correspondCodecCalling(
         codecInfo,
         declaration,
+        emptyModifier = StreamCodecModifier,
         inferType = { it.toTypeName() },
         inferTerm = { type ->
             type.declaration.findAnnotation<AutoStreamCodec>()?.let { annotation ->
@@ -48,16 +50,18 @@ internal class StreamCodecPropertyInfo(
         codecDefaultName = source.defaultCodecName
     ) { type ->
         context(env) {
-            modifierMarked.correspondStreamCodecCalling()
+            modifierMarked.correspond()
         }
     }
 
     private val codeCallingVarName = "c_$name"
 
-    fun codecCallingDefineBlock() =
-        PropertySpec.builder(codeCallingVarName, source.typeOf(codeCalling.type), KModifier.PRIVATE)
-            .initializer(codeCalling.term)
+    fun codecCallingDefineBlock(): PropertySpec {
+        val codecCalling = correspondedModifierMarked.codecCalling
+        return PropertySpec.builder(codeCallingVarName, source.typeOf(codecCalling.type), KModifier.PRIVATE)
+            .initializer(codecCalling.term)
             .build()
+    }
 
     fun encodeBlock(): CodeBlock = context(this) {
         val type = resolvedType
@@ -72,10 +76,10 @@ internal class StreamCodecPropertyInfo(
                             P_VALUE_NAME,
                             name
                         )
-                    }
+                    }.let { marked.modifier.transformArg(it) }
                 }
 
-                is ModifierMarked.Wrapper -> marked.modifier.transformResult(ace)
+                is ModifierMarked.Wrapper -> marked.modifier.transformArg(ace)
             }
         }
 
@@ -97,9 +101,9 @@ internal class StreamCodecPropertyInfo(
         return modifierMarked.foldIn(result) { ace, marked ->
             when (marked) {
                 is ModifierMarked.Type -> {
-                    ace.transformIf({ marked.resolvedType.nullability == Nullability.NULLABLE }) {
+                    ace.transformIf({ marked.resolvedType.isMarkedNullable }) {
                         CodeBlock.of("%L.orElse(null)", it)
-                    }
+                    }.let { marked.modifier.transformResult(it) }
                 }
 
                 is ModifierMarked.Wrapper -> marked.modifier.transformResult(ace)
@@ -108,18 +112,46 @@ internal class StreamCodecPropertyInfo(
     }
 }
 
+
 context(env: ProcessEnv)
-internal fun ModifierMarked<StreamCodecModifier>.correspondStreamCodecCalling(): CodecCalling {
+internal fun ModifierMarked<StreamCodecModifier>.correspond(): CorrespondedModifierMarked<StreamCodecModifier> {
     if (this is ModifierMarked.Wrapper) {
-        return inner.correspondStreamCodecCalling()
+        val correspondedInner = inner.correspond()
+        return CorrespondedModifierMarked.Wrapper(
+            source = source,
+            modifier = modifier,
+            inner = correspondedInner,
+            codecCalling = modifier.transformCodecCalling(correspondedInner.codecCalling)
+        )
     }
-    this as ModifierMarked.Type
+
+    return (this as ModifierMarked.Type).correspond()
+}
+
+context(env: ProcessEnv)
+internal fun ModifierMarked.Type<StreamCodecModifier>.correspond(): CorrespondedModifierMarked.Type<StreamCodecModifier> {
+    fun correspondWith(codecCalling: CodecCalling): CorrespondedModifierMarked.Type<StreamCodecModifier> =
+        CorrespondedModifierMarked.Type(
+            source = source,
+            modifier = modifier,
+            resolvedType = resolvedType,
+            arguments = arguments.map { it.correspond() },
+            codecCalling = codecCalling
+        )
 
     fun delegateByCodec(): CodecCalling {
         val marked = CodecPropertyInfo.scanModifiers(source)
-        val codec = marked.correspondCodecCalling()
-        return codec.map { type, term ->
-            type to CodeBlock.of("%T.fromCodec(%L)", TypeMirrors.ByteBufCodecs, term)
+        val codec = marked.correspond().codecCalling
+        return codec.map { type, term, _ ->
+            Triple(
+                type,
+                CodeBlock.of(
+                    "%T.fromCodec(%L)",
+                    TypeMirrors.ByteBufCodecs,
+                    term
+                ),
+                codec.genericCodecCallings
+            )
         }
     }
 
@@ -133,13 +165,16 @@ internal fun ModifierMarked<StreamCodecModifier>.correspondStreamCodecCalling():
             resolvedType.isMarkedNullable -> copy(resolvedType = resolvedType.makeNotNullable())
             else -> return@run
         }
-        val codecCalling = dataType.correspondStreamCodecCalling()
-        return CodecCalling(
-            type = Optional::class.asTypeName().parameterizedBy(codecCalling.type),
-            term = CodeBlock.of(
-                "%T.optional(%L)",
-                TypeMirrors.ByteBufCodecs,
-                codecCalling.term
+        val codecCalling = dataType.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = Optional::class.asTypeName().parameterizedBy(codecCalling.type),
+                term = CodeBlock.of(
+                    "%T.optional(%L)",
+                    TypeMirrors.ByteBufCodecs,
+                    codecCalling.term
+                ),
+                genericCodecCallings = listOf(codecCalling)
             )
         )
     }
@@ -151,26 +186,29 @@ internal fun ModifierMarked<StreamCodecModifier>.correspondStreamCodecCalling():
     val isKPair = qname == Pair::class.qualifiedName
 
     if (isDPPair || isKPair) {
-        return delegateByCodec()
+        return correspondWith(delegateByCodec())
     }
 
     if (resolvedType.isList) {
         val markedT = arguments.first()
-        val codecCalling = markedT.correspondStreamCodecCalling()
-        return CodecCalling(
-            type = List::class.asTypeName().parameterizedBy(codecCalling.type),
-            term = CodeBlock.of(
-                "%T.list<%T, %T>().apply(%L)",
-                TypeMirrors.ByteBufCodecs,
-                TypeMirrors.ByteBuf,
-                codecCalling.type,
-                codecCalling.term
+        val codecCalling = markedT.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = List::class.asTypeName().parameterizedBy(codecCalling.type),
+                term = CodeBlock.of(
+                    "%T.list<%T, %T>().apply(%L)",
+                    TypeMirrors.ByteBufCodecs,
+                    TypeMirrors.ByteBuf,
+                    codecCalling.type,
+                    codecCalling.term
+                ),
+                genericCodecCallings = listOf(codecCalling)
             )
         )
     }
 
     if (resolvedType.isMap) {
-        return delegateByCodec()
+        return correspondWith(delegateByCodec())
     }
 
     val guessedTerm = run {
@@ -198,6 +236,6 @@ internal fun ModifierMarked<StreamCodecModifier>.correspondStreamCodecCalling():
         type = resolvedType.toTypeName(), // Most fundamental origin
         term = guessedTerm
     )
-    return modifier.transformCodecCalling(codecCalling)
+    return correspondWith(modifier.transformCodecCalling(codecCalling))
 }
 

@@ -27,3 +27,6 @@ dependencies {
 
 
 
+ksp {
+    arg("wrapNullableInCodec", "true")
+}

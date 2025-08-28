@@ -34,6 +34,11 @@ interface Attachment {
 }
 
 
+class ProcessOptions(env: SymbolProcessorEnvironment) {
+    val enableWrapNullableInCodec  = env.options["wrapNullableInCodec"]?.toBooleanStrictOrNull() ?: false
+}
+
+
 class ProcessEnv(
     val environment: SymbolProcessorEnvironment,
     val resolver: Resolver,
@@ -42,6 +47,7 @@ class ProcessEnv(
     val logger get() = environment.logger
     private val _attachments = mutableSetOf<Attachment>()
     val attachments = _attachments as Set<Attachment>
+    val options = ProcessOptions(environment)
 
     fun createFile(block: NotifyScope.() -> Unit) {
         val scope = object : NotifyScope {

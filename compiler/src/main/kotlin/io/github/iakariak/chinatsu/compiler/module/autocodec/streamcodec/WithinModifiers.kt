@@ -48,13 +48,15 @@ private val withIn = StreamCodecAttachment.install(run {
 
 private class WithinNumberModifier<N : Number>(val startInclusive: N, val endInclusive: N) :
     StreamCodecModifier {
-    override fun transformCodecCalling(codecCalling: CodecCalling) = codecCalling.map { type, term ->
-        type to CodeBlock.of(
-            "%L.%M(%L, %L)",
-            term,
-            withIn,
-            startInclusive,
-            endInclusive,
+    override fun transformCodecCalling(codecCalling: CodecCalling) = codecCalling.map { type, term, generics ->
+        Triple(
+            type, CodeBlock.of(
+                "%L.%M(%L, %L)",
+                term,
+                withIn,
+                startInclusive,
+                endInclusive,
+            ), generics
         )
     }
 }

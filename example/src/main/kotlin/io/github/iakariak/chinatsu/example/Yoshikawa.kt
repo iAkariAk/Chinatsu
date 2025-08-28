@@ -49,7 +49,7 @@ data class YoConfig(
     @WithinLong(1, Long.MAX_VALUE)
     val def: Long? = null,
     @DelegateCodec
-    val fullname: Pair<String, String> = "yoshikawa" to "chinatsu",
+    val fullname: kotlin.Pair<String, String> = "yoshikawa" to "chinatsu",
 ) : Config {
     companion object
 }

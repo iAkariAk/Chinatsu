@@ -41,14 +41,14 @@ internal data class ByCodec(
             val instance = CodeBlock.of("instance")
             add("\n%T.create { %L ->\n", TypeMirrors.RecordCodecBuilder, instance)
             withIndent {
-                val args = infos.map { it.getterDescriptorBlock() }
+                val args = infos.map { it.getterBlock() }
                 val pointed = buildCodeBlock {
                     add("%L.point { %L ->\n", instance,infos.joinToCode { CodeBlock.of("%N", it.name) })
                     withIndent {
                         add("%T(\n", className)
                         withIndent {
                             infos.forEach { info ->
-                                add("%N = %L,\n", info.name, info.constructorDescriptorBlock())
+                                add("%N = %L,\n", info.name, info.constructorBlock())
                             }
                         }
                         add(")\n")

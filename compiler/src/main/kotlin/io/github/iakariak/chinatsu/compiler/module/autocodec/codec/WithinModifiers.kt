@@ -12,13 +12,15 @@ private class WithinNumberModifier<N : Number>(
     val startInclusive: N,
     val endInclusive: N
 ) : CodecModifier {
-    override fun transformCodecCalling(codecCalling: CodecCalling) = codecCalling.map { type, term ->
-        type to CodeBlock.of(
-            "%L.validate(%T.checkRange(%L, %L))",
-            term,
-            TypeMirrors.Codec,
-            startInclusive,
-            endInclusive,
+    override fun transformCodecCalling(codecCalling: CodecCalling) = codecCalling.map { type, term, generics ->
+        Triple(
+            type, CodeBlock.of(
+                "%L.validate(%T.checkRange(%L, %L))",
+                term,
+                TypeMirrors.Codec,
+                startInclusive,
+                endInclusive,
+            ), generics
         )
     }
 }

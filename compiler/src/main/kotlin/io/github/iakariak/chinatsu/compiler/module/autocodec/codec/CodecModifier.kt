@@ -17,6 +17,8 @@ internal interface CodecModifier {
      */
     context(info: CodecPropertyInfo)
     fun transformConstructor(arg: CodeBlock): CodeBlock = arg
+
+    companion object Empty : CodecModifier
 }
 
 

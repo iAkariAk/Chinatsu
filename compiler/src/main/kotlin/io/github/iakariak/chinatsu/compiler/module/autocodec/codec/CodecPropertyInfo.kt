@@ -2,16 +2,14 @@ package io.github.iakariak.chinatsu.compiler.module.autocodec.codec
 
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.asClassName
-import com.squareup.kotlinpoet.asTypeName
-import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.AutoCodec
 import io.github.iakariak.chinatsu.annotation.CodecInfo
 import io.github.iakariak.chinatsu.compiler.*
 import io.github.iakariak.chinatsu.compiler.module.autocodec.CodecCalling
+import io.github.iakariak.chinatsu.compiler.module.autocodec.CorrespondedModifierMarked
 import io.github.iakariak.chinatsu.compiler.module.autocodec.ModifierMarked
 import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
 import java.util.*
@@ -30,14 +28,15 @@ internal class CodecPropertyInfo(
                 .map { CodecPropertyInfo(it, source, env) }
     }
 
-    private val modifierMarked = scanModifiers(declaration)
     val codecInfo = declaration.findAnnotation<CodecInfo>()
     val name = PropertyInfo.getName(codecInfo, declaration)
     val resolvedType get() = declaration.type.resolve()
 
-    val codeCalling = PropertyInfo.getCodecCalling(
+    private val modifierMarked = scanModifiers(declaration)
+    private val correspondedModifierMarked = PropertyInfo.correspondCodecCalling(
         codecInfo = codecInfo,
         declaration = declaration,
+        emptyModifier = CodecModifier,
         inferType = { it.toTypeName() },
         inferTerm = { type ->
             type.declaration.findAnnotation<AutoCodec>()?.let { annotation ->
@@ -47,37 +46,55 @@ internal class CodecPropertyInfo(
         codecDefaultName = source.defaultCodecName
     ) {
         context(env) {
-            modifierMarked.correspondCodecCalling()
+            modifierMarked.correspond(true)
         }
     }
 
-    fun constructorDescriptorBlock(): CodeBlock {
+    fun constructorBlock(): CodeBlock {
         val arg = buildCodeBlock {
             add(name)
             if (resolvedType.isMarkedNullable) {
                 add(".orElse(null)")
             }
         }
-        return modifierMarked.foldIn(arg) { ace, marked ->
+        return correspondedModifierMarked.foldIn(arg) { ace, marked ->
+            when (marked) {
+                is CorrespondedModifierMarked.Type -> {
+                    ace.transformIf({ marked.resolvedType.isMarkedNullable }) {
+                        CodeBlock.of(
+                            "%L.orElse(null)",
+                            it
+                        )
+                    }.let { marked.modifier.transformGetting(it) }
+                }
+
+                is CorrespondedModifierMarked.Wrapper -> marked.modifier.transformGetting(ace)
+            }
+
             marked.modifier.transformConstructor(ace)
         }
     }
 
-    fun getterDescriptorBlock(): CodeBlock = context(env) {
+    fun getterBlock(): CodeBlock = context(env) {
         val arg = CodeBlock.of("obj.%N", declaration.simpleName.asString())
-        val transformedArg = modifierMarked.foldIn(arg) { ace, marked ->
-            marked.modifier.transformGetting(ace)
-        }
-        val getting = transformedArg.transformIf({ resolvedType.isMarkedNullable }) {
-            CodeBlock.of(
-                "%T.ofNullable(%L)",
-                Optional::class.asClassName(),
-                it
-            )
+        val getting = correspondedModifierMarked.foldIn(arg) { ace, marked ->
+            when (marked) {
+                is CorrespondedModifierMarked.Type -> {
+                    ace.transformIf({ marked.resolvedType.isMarkedNullable }) {
+                        CodeBlock.of(
+                            "%T.ofNullable(%L)",
+                            Optional::class.asClassName(),
+                            it
+                        )
+                    }.let { marked.modifier.transformGetting(it) }
+                }
+
+                is CorrespondedModifierMarked.Wrapper -> marked.modifier.transformGetting(ace)
+            }
         }
         return CodeBlock.of(
             "%L.%N(%S).forGetter { obj -> %L }",
-            codeCalling.term,
+            correspondedModifierMarked.codecCalling.term,
             if (resolvedType.isMarkedNullable || resolvedType.isOptional) "optionalFieldOf" else "fieldOf",
             name,
             getting
@@ -85,13 +102,37 @@ internal class CodecPropertyInfo(
     }
 }
 
+
 context(env: ProcessEnv)
-internal fun ModifierMarked<CodecModifier>.correspondCodecCalling(
-): CodecCalling {
+internal fun ModifierMarked<CodecModifier>.correspond(
+    isNullableImplByOuter: Boolean = false  // i.e. call from property
+): CorrespondedModifierMarked<CodecModifier> {
     if (this is ModifierMarked.Wrapper) {
-        return inner.correspondCodecCalling()
+        val correspondedInner = inner.correspond(isNullableImplByOuter)
+        return CorrespondedModifierMarked.Wrapper(
+            source = source,
+            modifier = modifier,
+            inner = correspondedInner,
+            codecCalling = modifier.transformCodecCalling(correspondedInner.codecCalling)
+        )
     }
-    this as ModifierMarked.Type
+
+    return (this as ModifierMarked.Type).correspond(isNullableImplByOuter)
+}
+
+
+context(env: ProcessEnv)
+internal fun ModifierMarked.Type<CodecModifier>.correspond(
+    isNullableImplByOuter: Boolean = false  // i.e. call from property
+): CorrespondedModifierMarked.Type<CodecModifier> {
+    fun correspondWith(codecCalling: CodecCalling): CorrespondedModifierMarked.Type<CodecModifier> =
+        CorrespondedModifierMarked.Type(
+            source = source,
+            modifier = modifier,
+            resolvedType = resolvedType,
+            arguments = arguments.map { it.correspond() },
+            codecCalling = codecCalling
+        )
 
     run {
         val dataType = when {
@@ -99,47 +140,125 @@ internal fun ModifierMarked<CodecModifier>.correspondCodecCalling(
             resolvedType.isMarkedNullable -> copy(resolvedType = resolvedType.makeNotNullable())
             else -> return@run
         }
-        return dataType.correspondCodecCalling()
+        val correspondedDataType = dataType.correspond()
+        val dateTypeCodeCalling = correspondedDataType.codecCalling
+        if (isNullableImplByOuter) {
+            val codecCalling = dateTypeCodeCalling.map { type, term, generics ->
+                Triple(
+                    Optional::class.asTypeName().parameterizedBy(type),
+                    term,
+                    generics
+                )
+            } // coupe with optionFieldOf
+            return correspondWith(codecCalling)
+        } else {
+            if (!env.options.enableWrapNullableInCodec) {
+                env.logger.error(
+                    "The nested nullable in Codec in cannot be allowed. " +
+                            "You can add ksp arg `wrapNullableInCodec` to map them automatically",
+                    source
+                )
+            } else {
+                val placeholderType = BOOLEAN
+                val actualType = Optional::class.asTypeName().parameterizedBy(dateTypeCodeCalling.type)
+                val wrapperType = TypeMirrors.DFEither.parameterizedBy(dateTypeCodeCalling.type, placeholderType)
+                return correspondWith(
+                    CodecCalling(
+                        type = actualType,
+                        term = CodeBlock.of(
+                            "%1T.either<%2T, %3T>(%4L, %1T.BOOL)" +
+                                    ".xmap(" +
+                                    "{ either -> either.left()}," +
+                                    "{ optional -> optional.map { %5T.left<%2T, %3T>(it)}.orElse(%5T.right(false)) }" +
+                                    ")",
+                            TypeMirrors.Codec,
+                            dateTypeCodeCalling.type,
+                            placeholderType,
+                            dateTypeCodeCalling.term,
+                            wrapperType,
+                        )
+                    )
+                )
+            }
+        }
     }
 
     val declaration = resolvedType.declaration
     val qname = declaration.qualifiedName!!.asString()
+
+    val isDPEither = qname == TypeMirrors.DFEither.canonicalName
+    if (isDPEither) {
+        val leftMarked = arguments[0]
+        val rightMarked = arguments[1]
+        val leftCodecCalling = leftMarked.correspond().codecCalling
+        val rightCodecCalling = rightMarked.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = TypeMirrors.DFEither.parameterizedBy(leftCodecCalling.type, rightCodecCalling.type),
+                term = CodeBlock.of(
+                    "%T.either<%T, %T>(%L, %L)",
+                    TypeMirrors.Codec,
+                    leftCodecCalling.type,
+                    rightCodecCalling.type,
+                    leftCodecCalling.term,
+                    rightCodecCalling.term
+                ),
+                genericCodecCallings = listOf(leftCodecCalling, rightCodecCalling)
+            )
+        )
+    }
 
     val isDPPair = qname == TypeMirrors.DFPair.canonicalName
     val isKPair = qname == Pair::class.qualifiedName
     if (isDPPair || isKPair) {
         val firstMarked = arguments[0]
         val secondMarked = arguments[1]
-        val firstCodecCalling = firstMarked.correspondCodecCalling()
-        val secondCodecCalling = secondMarked.correspondCodecCalling()
-        return CodecCalling(
-            type = resolvedType.toTypeName().erasedAsClass()!!.parameterizedBy(firstCodecCalling.type, secondCodecCalling.type),
-            term = CodeBlock.of(
-                "%T.pair<%T, %T>(%L, %L)",
-                TypeMirrors.Codec,
-                firstCodecCalling.type,
-                secondCodecCalling.type,
-                firstCodecCalling.term,
-                secondCodecCalling.term
-            ).transformIf({ isKPair }) {
-                CodeBlock.of(
-                    "%L.xmap({ dfpair -> dfpair.first to dfpair.second}, {(first, second) -> %T(first, second)})",
-                    it,
-                    TypeMirrors.DFPair
-                )
-            }
+        val firstCodecCalling = firstMarked.correspond().codecCalling
+        val secondCodecCalling = secondMarked.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = resolvedType.toTypeName().erasedAsClass()!!
+                    .parameterizedBy(firstCodecCalling.type, secondCodecCalling.type),
+                term = CodeBlock.of(
+                    "%T.pair<%T, %T>(%L, %L)",
+                    TypeMirrors.Codec,
+                    firstCodecCalling.type,
+                    secondCodecCalling.type,
+                    firstCodecCalling.term,
+                    secondCodecCalling.term
+                ).transformIf({ isKPair }) {
+                    CodeBlock.of(
+                        "%L.xmap({ dfpair -> dfpair.first to dfpair.second}, {(first, second) -> %T(first, second)})",
+                        it,
+                        TypeMirrors.DFPair
+                    )
+                },
+                genericCodecCallings = listOf(firstCodecCalling, secondCodecCalling)
+            )
         )
     }
 
     if (resolvedType.isList) {
         val markedT = arguments.first()
-        val codecCalling = markedT.correspondCodecCalling()
-        return CodecCalling(
-            type = List::class.asTypeName().parameterizedBy(codecCalling.type),
-            CodeBlock.of(
-                "%T.list(%L)",
-                TypeMirrors.Codec,
-                codecCalling.term
+        val codecCalling = markedT.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = List::class.asTypeName().parameterizedBy(codecCalling.type),
+                term = CodeBlock.of(
+                    "%T.list(%L)",
+                    TypeMirrors.Codec,
+                    codecCalling.term
+                ),
+                genericCodecCallings = listOf(codecCalling),
+                termMap = { self, genericNamedOrder, transformElement ->
+                    val element = genericNamedOrder[1]!!
+                    CodeBlock.of(
+                        "%L.map { %N -> %L }",
+                        self,
+                        element,
+                        transformElement(CodeBlock.of("%N", element))
+                    )
+                }
             )
         )
     }
@@ -148,21 +267,23 @@ internal fun ModifierMarked<CodecModifier>.correspondCodecCalling(
     if (resolvedType.isMarkedNullable) {
         val markedT = arguments[0]
         val markedV = arguments[1]
-        val codecCallingT = markedT.correspondCodecCalling()
-        val codecCallingV = markedV.correspondCodecCalling()
-        return CodecCalling(
-            type = Map::class.asTypeName().parameterizedBy(codecCallingT.type, codecCallingV.type),
-            term = CodeBlock.of(
-                "%T.unboundedMap<%T, %T>(%L, %L)",
-                TypeMirrors.Codec,
-                codecCallingT.type,
-                codecCallingV.type,
-                codecCallingT.term,
-                codecCallingV.term
+        val codecCallingT = markedT.correspond().codecCalling
+        val codecCallingV = markedV.correspond().codecCalling
+        return correspondWith(
+            CodecCalling(
+                type = Map::class.asTypeName().parameterizedBy(codecCallingT.type, codecCallingV.type),
+                term = CodeBlock.of(
+                    "%T.unboundedMap<%T, %T>(%L, %L)",
+                    TypeMirrors.Codec,
+                    codecCallingT.type,
+                    codecCallingV.type,
+                    codecCallingT.term,
+                    codecCallingV.term
+                ),
+                genericCodecCallings = listOf(codecCallingT, codecCallingV)
             )
         )
     }
-
 
     val guessedTerm = run {
         val field = when (qname) {
@@ -182,6 +303,6 @@ internal fun ModifierMarked<CodecModifier>.correspondCodecCalling(
         type = resolvedType.toTypeName(), // Most fundamental origin
         term = guessedTerm
     )
-    return modifier.transformCodecCalling(codecCalling)
+    return correspondWith(modifier.transformCodecCalling(codecCalling))
 }
 

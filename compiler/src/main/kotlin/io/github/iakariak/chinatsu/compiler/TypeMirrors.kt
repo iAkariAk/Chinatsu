@@ -21,6 +21,7 @@ internal object TypeMirrors {
     val Event = ClassName("net.fabricmc.fabric.api.event", "Event")
     val RecordCodecBuilder = ClassName("com.mojang.serialization.codecs", "RecordCodecBuilder")
 
+    val DFEither = ClassName("com.mojang.datafixers.util", "Either")
     val DFPair = ClassName("com.mojang.datafixers.util", "Pair")
     val DFApp = ClassName("com.mojang.datafixers.kinds", "App")
     val DFK1 = ClassName("com.mojang.datafixers.kinds", "K1")

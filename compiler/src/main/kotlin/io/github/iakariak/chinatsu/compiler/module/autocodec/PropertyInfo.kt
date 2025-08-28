@@ -9,19 +9,19 @@ import kotlin.reflect.KClass
 
 
 internal object PropertyInfo {
-    fun getCodecCalling(
+    fun <T> correspondCodecCalling(
         codecInfo: CodecInfo?,
         declaration: KSPropertyDeclaration,
+        emptyModifier: T,
         inferType: (KSType) -> TypeName,
         inferTerm: (KSType) -> CodeBlock?,
         codecDefaultName: String,
-        feedback: (propertyType: KSType) -> CodecCalling,
-    ): CodecCalling {
+        feedback: (propertyType: KSType) -> CorrespondedModifierMarked<T>,
+    ): CorrespondedModifierMarked<T> {
         val typeRef = declaration.type
         val type = typeRef.resolve()
         val declQualifiedName = type.declaration.qualifiedName!!.asString()
-
-        return CodecCalling(
+        val codecCalling = CodecCalling(
             type = inferType(type),
             term = codecInfo?.codecCalling
                 ?.replace("~", declQualifiedName)
@@ -29,6 +29,19 @@ internal object PropertyInfo {
                 ?.let(CodeBlock::of)
                 ?: inferTerm(type)
                 ?: return feedback(type)
+        )
+        return CorrespondedModifierMarked.Wrapper(
+            source = declaration,
+            modifier = emptyModifier,
+            inner = CorrespondedModifierMarked.Type<T>(
+                source = declaration.type,
+                modifier = emptyModifier,
+                resolvedType = declaration.type.resolve(),
+                arguments = emptyList(),
+                codecCalling = codecCalling
+            ),
+            codecCalling = codecCalling
+
         )
     }
 
@@ -62,7 +75,8 @@ internal object PropertyInfo {
                         annotated = typeRef,
                         builtinModifiers = builtinModifiers,
                         compose = compose,
-                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: typeRef.resolve().nullability
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM }
+                            ?: typeRef.resolve().nullability
                     ),
                 )
             }
@@ -76,7 +90,8 @@ internal object PropertyInfo {
                         annotated = typeRef,
                         builtinModifiers = builtinModifiers,
                         compose = compose,
-                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: annotated.type.resolve().nullability
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM }
+                            ?: annotated.type.resolve().nullability
                     )
                 )
             }
@@ -88,7 +103,8 @@ internal object PropertyInfo {
                     modifier = modifier,
                     inner = scanModifiers(
                         annotated = typeRef!!, builtinModifiers = builtinModifiers, compose = compose,
-                        nullability = nullability.takeUnless { it == Nullability.PLATFORM } ?: typeRef.resolve().nullability
+                        nullability = nullability.takeUnless { it == Nullability.PLATFORM }
+                            ?: typeRef.resolve().nullability
                     )
                 )
             }
@@ -144,14 +160,47 @@ internal sealed interface ModifierMarked<T> {
     }
 }
 
+internal sealed interface CorrespondedModifierMarked<T> {
+    val source: KSAnnotated
+    val modifier: T
+    val codecCalling: CodecCalling
+
+    fun <R> foldIn(initial: R, operation: (R, CorrespondedModifierMarked<T>) -> R): R
+
+    data class Wrapper<T>(
+        override val source: KSAnnotated,
+        override val modifier: T,
+        val inner: CorrespondedModifierMarked<T>,
+        override val codecCalling: CodecCalling
+    ) : CorrespondedModifierMarked<T> {
+        override fun <R> foldIn(initial: R, operation: (R, CorrespondedModifierMarked<T>) -> R) =
+            operation(inner.foldIn(initial, operation), this)
+    }
+
+    data class Type<T>(
+        override val source: KSTypeReference,
+        override val modifier: T,
+        val resolvedType: KSType,
+        val arguments: List<CorrespondedModifierMarked<T>>,
+        override val codecCalling: CodecCalling
+    ) : CorrespondedModifierMarked<T> {
+        override fun <R> foldIn(initial: R, operation: (R, CorrespondedModifierMarked<T>) -> R): R =
+            operation(initial, this)
+    }
+}
+
 internal data class CodecCalling(
     val type: TypeName, // exclusive Codec or StreamCodec wrapper
-    val term: CodeBlock
+    val term: CodeBlock,
+    val genericCodecCallings: List<CodecCalling> = emptyList(),
+    val termMap: (self: CodeBlock, genericNamedOrder: Map<Int, String>, transformElement: (CodeBlock) -> CodeBlock) -> CodeBlock = { self, _, transform ->
+        transform(self)
+    }
 ) {
     fun typeBlock() = CodeBlock.of("%T", type)
 
-    inline fun map(transform: (type: TypeName, term: CodeBlock) -> Pair<TypeName, CodeBlock>): CodecCalling {
-        val (type, term) = transform(type, term)
-        return CodecCalling(type, term)
+    inline fun map(transform: (type: TypeName, term: CodeBlock, genericCodecCallings: List<CodecCalling>) -> Triple<TypeName, CodeBlock, List<CodecCalling>>): CodecCalling {
+        val (type, term, generics) = transform(type, term, genericCodecCallings)
+        return CodecCalling(type, term, generics, termMap)
     }
 }
