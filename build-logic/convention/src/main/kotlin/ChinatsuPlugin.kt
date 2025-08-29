@@ -5,24 +5,25 @@ import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.language.jvm.tasks.ProcessResources
 
 
-class Properties(project: Project) {
-    val archivesName = project.property("archives_base_name")!!
-    val minecraftVersion = project.property("minecraft_version")!!
-    val loaderVersion = project.property("loader_version")!!
-    val fabricVersion = project.property("fabric_version")!!
-    val kotlinLoaderVersion = project.property("kotlin_loader_version")!!
+class Properties(providers: ProviderFactory) {
+    val archivesName by providers.gradleProperty("archives_base_name")
+    val minecraftVersion by providers.gradleProperty("minecraft_version")
+    val loaderVersion by providers.gradleProperty("loader_version")
+    val fabricVersion by providers.gradleProperty("fabric_version")
+    val kotlinLoaderVersion by providers.gradleProperty("kotlin_loader_version")
 }
 
 
 class ChinatsuPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
-            val properties = Properties(target.rootProject)
+            val properties = Properties(target.rootProject.providers)
             context(properties) {
                 apply(plugin = "com.gradleup.shadow")
                 apply(plugin = "fabric-loom")
@@ -89,19 +90,21 @@ class ChinatsuPlugin : Plugin<Project> {
             "modImplementation"("net.fabricmc:fabric-language-kotlin:${props.kotlinLoaderVersion}")
             "modImplementation"("net.fabricmc.fabric-api:fabric-api:${props.fabricVersion}")
         }
-        tasks.withType<ProcessResources>() {
-            inputs.property("version", version)
+        val modVersion = version
+        tasks.withType<ProcessResources> {
+            inputs.property("version", modVersion)
             inputs.property("minecraft_version", props.minecraftVersion)
             inputs.property("loader_version", props.loaderVersion)
             filteringCharset = "UTF-8"
 
             filesMatching("fabric.mod.json") {
                 expand(
-                    "version" to version,
+                    "version" to modVersion,
                     "minecraft_version" to props.minecraftVersion,
                     "loader_version" to props.loaderVersion,
                     "kotlin_loader_version" to props.kotlinLoaderVersion
                 )
+                outputs.file(file)
             }
         }
     }
