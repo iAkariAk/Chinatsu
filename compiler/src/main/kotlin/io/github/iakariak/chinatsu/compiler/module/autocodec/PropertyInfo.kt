@@ -193,14 +193,19 @@ internal data class CodecCalling(
     val type: TypeName, // exclusive Codec or StreamCodec wrapper
     val term: CodeBlock,
     val genericCodecCallings: List<CodecCalling> = emptyList(),
-    val termMap: (self: CodeBlock, genericNamedOrder: Map<Int, String>, transformElement: (CodeBlock) -> CodeBlock) -> CodeBlock = { self, _, transform ->
-        transform(self)
-    }
+    val converter: ValueConverter = ValueConverter,
 ) {
     fun typeBlock() = CodeBlock.of("%T", type)
 
     inline fun map(transform: (type: TypeName, term: CodeBlock, genericCodecCallings: List<CodecCalling>) -> Triple<TypeName, CodeBlock, List<CodecCalling>>): CodecCalling {
         val (type, term, generics) = transform(type, term, genericCodecCallings)
-        return CodecCalling(type, term, generics, termMap)
+        return CodecCalling(type, term, generics, converter)
     }
+}
+
+internal interface ValueConverter {
+    companion object Empty : ValueConverter
+
+    fun from(sourceBlock: CodeBlock): CodeBlock = sourceBlock
+    fun to(selfBlock: CodeBlock): CodeBlock = selfBlock
 }

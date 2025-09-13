@@ -8,10 +8,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import io.github.iakariak.chinatsu.annotation.AutoCodec
 import io.github.iakariak.chinatsu.annotation.CodecInfo
 import io.github.iakariak.chinatsu.compiler.*
-import io.github.iakariak.chinatsu.compiler.module.autocodec.CodecCalling
-import io.github.iakariak.chinatsu.compiler.module.autocodec.CorrespondedModifierMarked
-import io.github.iakariak.chinatsu.compiler.module.autocodec.ModifierMarked
-import io.github.iakariak.chinatsu.compiler.module.autocodec.PropertyInfo
+import io.github.iakariak.chinatsu.compiler.module.autocodec.*
 import java.util.*
 
 
@@ -140,16 +137,21 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
             resolvedType.isMarkedNullable -> copy(resolvedType = resolvedType.makeNotNullable())
             else -> return@run
         }
+        val converter = object : ValueConverter {
+            override fun from(sourceBlock: CodeBlock) =
+                CodeBlock.of("%T.ofNullable(%L)", Optional::class.asTypeName(), sourceBlock)
+
+            override fun to(selfBlock: CodeBlock) =
+                CodeBlock.of("%L.orElse(null)", selfBlock)
+        }
         val correspondedDataType = dataType.correspond()
         val dateTypeCodeCalling = correspondedDataType.codecCalling
+        val actualOptionalType = Optional::class.asTypeName().parameterizedBy(dateTypeCodeCalling.type)
         if (isNullableImplByOuter) {
-            val codecCalling = dateTypeCodeCalling.map { type, term, generics ->
-                Triple(
-                    Optional::class.asTypeName().parameterizedBy(type),
-                    term,
-                    generics
-                )
-            } // coupe with optionFieldOf
+            val codecCalling = dateTypeCodeCalling.copy(
+                type = actualOptionalType,
+                converter = converter
+            ) // coupe with optionFieldOf
             return correspondWith(codecCalling)
         } else {
             if (!env.options.enableWrapNullableInCodec) {
@@ -160,11 +162,10 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
                 )
             } else {
                 val placeholderType = BOOLEAN
-                val actualType = Optional::class.asTypeName().parameterizedBy(dateTypeCodeCalling.type)
                 val wrapperType = TypeMirrors.DFEither.parameterizedBy(dateTypeCodeCalling.type, placeholderType)
                 return correspondWith(
                     CodecCalling(
-                        type = actualType,
+                        type = actualOptionalType,
                         term = CodeBlock.of(
                             "%1T.either<%2T, %3T>(%4L, %1T.BOOL)" +
                                     ".xmap(" +
@@ -176,7 +177,8 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
                             placeholderType,
                             dateTypeCodeCalling.term,
                             wrapperType,
-                        )
+                        ),
+                        converter = converter
                     )
                 )
             }
@@ -215,6 +217,8 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
         val secondMarked = arguments[1]
         val firstCodecCalling = firstMarked.correspond().codecCalling
         val secondCodecCalling = secondMarked.correspond().codecCalling
+        println(secondCodecCalling.converter)
+
         return correspondWith(
             CodecCalling(
                 type = resolvedType.toTypeName().erasedAsClass()!!
@@ -232,6 +236,24 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
                         it,
                         TypeMirrors.DFPair
                     )
+                }.transformIf({
+                    listOf(
+                        firstCodecCalling.converter,
+                        secondCodecCalling.converter
+                    ).any { it != ValueConverter.Empty }
+                }) {
+                    val first = CodeBlock.of("first")
+                    val second = CodeBlock.of("second")
+                    CodeBlock.of(
+                        "%1L.xmap({ (%2L, %3L) -> %4L to %5L }, { (%2L, %3L) -> %6L to %7L })",
+                        it,
+                        first,
+                        second,
+                        firstCodecCalling.converter.to(first),
+                        secondCodecCalling.converter.to(second),
+                        firstCodecCalling.converter.from(first),
+                        secondCodecCalling.converter.from(second),
+                    )
                 },
                 genericCodecCallings = listOf(firstCodecCalling, secondCodecCalling)
             )
@@ -248,19 +270,22 @@ internal fun ModifierMarked.Type<CodecModifier>.correspond(
                     "%T.list(%L)",
                     TypeMirrors.Codec,
                     codecCalling.term
-                ),
-                genericCodecCallings = listOf(codecCalling),
-                termMap = { self, genericNamedOrder, transformElement ->
-                    val element = genericNamedOrder[1]!!
+                ).transformIf({ codecCalling.converter != ValueConverter.Empty }) {
+                    val item = CodeBlock.of("item")
                     CodeBlock.of(
-                        "%L.map { %N -> %L }",
-                        self,
-                        element,
-                        transformElement(CodeBlock.of("%N", element))
+                        "%1L.xmap({ %2L -> %3L }, { %2L -> %4L to %5L })",
+                        it,
+                        item,
+                        codecCalling.converter.to(item),
+                        codecCalling.converter.from(item),
                     )
-                }
-            )
-        )
+                    CodeBlock.of(
+                        "%L.map { %L -> %L }",
+                        it, item, codecCalling.converter.from(item)
+                    )
+                },
+                genericCodecCallings = listOf(codecCalling)
+            ))
     }
 
 
