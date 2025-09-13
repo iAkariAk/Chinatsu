@@ -1,8 +1,8 @@
-
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
@@ -13,6 +13,10 @@ plugins {
     alias(libs.plugins.maven.publish) apply false
 }
 
+val fabricLoaderVersion = property("kotlin_loader_version").toString()
+check(fabricLoaderVersion.endsWith(libs.versions.kotlin.get())) {
+    "Edit the loader version in properties when upgrading kotlin"
+}
 
 allprojects {
     version = project.property("mod_version") as String
@@ -39,12 +43,20 @@ subprojects {
         configure<KotlinJvmProjectExtension> {
             compilerOptions {
                 jvmTarget.set(JvmTarget.fromTarget(targetJavaVersion.toString()))
+                languageVersion.set(KotlinVersion.KOTLIN_2_3)
 
                 // Refer to https://kotlinlang.org/docs/whatsnew22.html
                 freeCompilerArgs = listOf(
                     "-Xcontext-parameters",
                     "-Xcontext-sensitive-resolution",
                     "-Xnested-type-aliases",
+                    "-Xallow-holdsin-contract",
+                    "-Xallow-condition-implies-returns-contracts"
+                )
+
+                optIn = listOf(
+                    "kotlin.contracts.ExperimentalContracts",
+                    "kotlin.contracts.ExperimentalExtendedContracts",
                 )
             }
         }

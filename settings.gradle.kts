@@ -6,6 +6,7 @@ pluginManagement {
             name = "Fabric"
         }
         gradlePluginPortal()
+        google()
     }
 }
 dependencyResolutionManagement {
